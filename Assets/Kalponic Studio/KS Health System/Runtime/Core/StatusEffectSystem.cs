@@ -61,6 +61,30 @@ namespace KalponicStudio.Health
             }
         }
 
+        public List<StatusEffect> GetActiveEffects()
+        {
+            List<StatusEffect> snapshot = new List<StatusEffect>(activeEffects.Count);
+            for (int i = 0; i < activeEffects.Count; i++)
+            {
+                snapshot.Add(CloneEffect(activeEffects[i]));
+            }
+
+            return snapshot;
+        }
+
+        public void RestoreEffects(IEnumerable<StatusEffect> effects)
+        {
+            ClearEffects();
+
+            foreach (StatusEffect effect in effects)
+            {
+                StatusEffect copy = CloneEffect(effect);
+                activeEffects.Add(copy);
+                ApplyInstantEffect(copy, true);
+                RaiseEffectApplied(copy.effectName);
+            }
+        }
+
         private void ApplyContinuousEffect(StatusEffect effect)
         {
             if (effect.tickInterval <= 0f) return;
@@ -186,6 +210,18 @@ namespace KalponicStudio.Health
                     speedModifier.ResetSpeedMultiplier();
                 }
             }
+        }
+
+        private StatusEffect CloneEffect(StatusEffect effect)
+        {
+            StatusEffect clone = new StatusEffect(effect.effectType, effect.duration, effect.isBuff, effect.amountPerTick, effect.tickInterval, effect.speedMultiplier);
+            clone.effectName = effect.effectName;
+            clone.remainingTime = effect.remainingTime;
+            clone.tickTimer = effect.tickTimer;
+            clone.stackingMode = effect.stackingMode;
+            clone.maxStacks = effect.maxStacks;
+            clone.stackCount = effect.stackCount;
+            return clone;
         }
 
         private float GetEffectiveSpeedMultiplier(StatusEffect effect)

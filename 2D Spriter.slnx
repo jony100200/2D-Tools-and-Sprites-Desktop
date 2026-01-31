@@ -6,10 +6,11 @@
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="MK.Toon.Editor.csproj" />
+  <Project Path="KalponicStudio.HealthSystem.csproj" />
   <Project Path="MK.RampCreator.csproj" />
   <Project Path="KalponicStudio.Tooltips.csproj" />
   <Project Path="MK.Toon.csproj" />
-  <Project Path="KalponicStudio.HealthSystem.csproj" />
+  <Project Path="KalponicStudio.HealthSystem.Extensions.csproj" />
   <Project Path="MagicaCloth2Example.csproj" />
   <Project Path="MK.Toon.VariantsManager.csproj" />
   <Project Path="MK.MeshUtility.csproj" />

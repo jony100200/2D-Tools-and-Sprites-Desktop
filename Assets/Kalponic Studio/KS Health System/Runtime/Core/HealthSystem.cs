@@ -64,6 +64,7 @@ namespace KalponicStudio.Health
         public bool IsInvulnerable => invulnerabilityTimer > 0;
         public bool IsDowned => isDowned;
         public bool IsDead => isDead;
+        public float DownedTimeRemaining => downedTimer;
 
         // Private fields
         private float regenerationTimer = 0f;
@@ -347,6 +348,27 @@ namespace KalponicStudio.Health
             currentHealth = Mathf.Clamp(healthAmount, 1, maxHealth);
             RaiseHealthChanged();
             RaiseRevived();
+        }
+
+        public void ForceDowned(float timeRemaining)
+        {
+            if (isDead) return;
+
+            isDowned = true;
+            downedTimer = Mathf.Max(0.1f, timeRemaining);
+            currentHealth = 0;
+            RaiseHealthChanged();
+            RaiseDowned();
+        }
+
+        public void ForceDead()
+        {
+            if (isDead) return;
+
+            currentHealth = 0;
+            isDowned = false;
+            downedTimer = 0f;
+            Die();
         }
 
         public void StartInvulnerability()

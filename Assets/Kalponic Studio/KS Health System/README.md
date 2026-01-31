@@ -232,7 +232,28 @@ Tips:
 
 ---
 
-## 7) Recommended setup by game type
+## 7) Extensions (optional, Pro glue)
+
+These live in `Extensions/` and can be added only when you need them.
+
+Combat
+- `TeamComponent` (team + faction + friendly fire flag)
+- `DamageRouter` (team-aware damage application)
+- `DamageSourceInfo` + `DamageRules`
+
+Tip: Leave `FactionId` empty if you only want team-based checks.
+
+Persistence
+- `HealthSnapshotComponent` + `IHealthSerializable`
+- `HealthSnapshot` (capture/restore health, shield, statuses)
+
+UI
+- `WorldSpaceHealthBar`
+- `BossHealthBar`
+
+---
+
+## 8) Recommended setup by game type
 
 Shmup (Sky Force style)
 - HealthSystem + ShieldSystem + HealthVisualSystem
@@ -256,7 +277,7 @@ Action RPG
 
 ---
 
-## 8) How to use events
+## 9) How to use events
 
 Code (C# events)
 - HealthSystem: `HealthChanged`, `DamageTaken`, `Healed`, `Death`, `Downed`, `Revived`
@@ -271,7 +292,7 @@ Event Channel (optional)
 
 ---
 
-## 9) Damage types and mitigation
+## 10) Damage types and mitigation
 
 - `DamageType` includes Generic, Physical, Fire, Ice, Poison, Electric, True.
 - Flat and percent mitigation are applied unless damage is True or IgnoreMitigation is set.
@@ -279,7 +300,7 @@ Event Channel (optional)
 
 ---
 
-## 10) Status effects and stacking
+## 11) Status effects and stacking
 
 Each effect supports:
 - Duration and tick interval
@@ -294,7 +315,7 @@ Default behavior:
 
 ---
 
-## 11) Downed / Revive
+## 12) Downed / Revive
 
 Optional flow:
 - On lethal damage: enter Downed state instead of Death
@@ -303,7 +324,7 @@ Optional flow:
 
 ---
 
-## 12) Health Profiles
+## 13) Health Profiles
 
 `HealthProfileSO` can configure:
 - Health settings
@@ -316,7 +337,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 13) Common issues
+## 14) Common issues
 
 - If no events fire, check if you subscribed to C# events or assigned UnityEvents.
 - If a shield exists but damage hits health, ensure `ShieldSystem` is on the same object.
@@ -324,7 +345,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 14) Notes on modularity
+## 15) Notes on modularity
 
 You can use any subset:
 - Health only
@@ -337,7 +358,7 @@ This is designed to remain clear, simple, and easy to debug.
 
 ---
 
-## 15) Separation of Function vs Visuals (recommended)
+## 16) Separation of Function vs Visuals (recommended)
 
 Keep gameplay logic separate from visuals:
 - Core logic: `HealthSystem`, `ShieldSystem`, `StatusEffectSystem`
