@@ -97,3 +97,13 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Ignore large not-needed asset folder with leading '!'
+/Assets/\!_HP\ Stylized\ Characters/
+
+# Ignore Animations folder
+/Assets/Animations/
+
+# Ignore DuplicatedClips and NoRMClips folders
+/Assets/DuplicatedClips/
+/Assets/NoRMClips/
