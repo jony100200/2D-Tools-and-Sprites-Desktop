@@ -1,0 +1,61 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <ui:VisualElement class="window-root">
+    <!-- Header -->
+    <ui:VisualElement class="header">
+      <ui:Label text="KS SnapStudio" class="title" />
+      <ui:Label text="v1.0" class="version" />
+    </ui:VisualElement>
+
+    <!-- Content Grid -->
+    <ui:ScrollView class="content-grid">
+      <!-- Input/Source Card -->
+      <ui:VisualElement class="card input-source">
+        <ui:Label text="Input/Source" class="card-title" />
+        <ui:VisualElement class="target-field-container">
+          <uie:ObjectField name="ks-snapstudio-input-target" label="Target Object" object-type="UnityEngine.GameObject" tooltip="Select the character GameObject that contains Animator or Animation components to capture animations from." />
+          <ui:VisualElement name="ks-snapstudio-target-validation-indicator" class="validation-indicator" />
+        </ui:VisualElement>
+        <ui:HelpBox text="Select the GameObject with Animator or Animation component." message-type="Info" />
+      </ui:VisualElement>
+
+      <!-- Settings Card -->
+      <ui:VisualElement class="card settings">
+        <ui:Label text="Settings" class="card-title" />
+        <uie:IntegerField name="ks-snapstudio-settings-width" label="Width" value="1024" tooltip="Output image width in pixels. Higher values create larger sprites but increase file size." />
+        <uie:IntegerField name="ks-snapstudio-settings-height" label="Height" value="1024" tooltip="Output image height in pixels. Higher values create larger sprites but increase file size." />
+        <uie:IntegerField name="ks-snapstudio-settings-fps" label="FPS" value="24" tooltip="Frames per second for animation capture. Higher values create smoother animations but more files." />
+        <uie:IntegerField name="ks-snapstudio-settings-max-frames" label="Max Frames" value="24" tooltip="Maximum frames to capture per animation. Limits capture time and file count." />
+        <ui:Toggle name="ks-snapstudio-settings-trim-sprites" label="Trim Sprites" value="true" tooltip="Remove transparent borders around sprites. When disabled, shows Character Fill % control for auto-sizing." />
+        <!-- Slider will be created programmatically -->
+        <ui:Toggle name="ks-snapstudio-settings-mirror-sprites" label="Mirror Sprites" value="true" tooltip="Automatically create left-facing versions of right-facing animations for complete character sets." />
+        <uie:IntegerField name="ks-snapstudio-settings-pixel-size" label="Pixel Size" value="16" tooltip="Pixelation level for retro/stylized look. Higher values create more visible pixels." />
+        <ui:Toggle name="ks-snapstudio-settings-hdr" label="HDR Capture (if available)" value="false" tooltip="Use HDR rendering for better quality in high dynamic range scenes. Only available on compatible hardware." />
+        <uie:ObjectField name="ks-snapstudio-settings-animator-controller" label="Animator Controller (Optional)" object-type="UnityEngine.RuntimeAnimatorController, UnityEngine" tooltip="Optional: Select an Animator Controller to help populate available animations." />
+        <ui:Toggle name="ks-snapstudio-settings-capture-all" label="Capture All Animations" value="false" tooltip="Capture all animations from the character. When disabled, shows Animation to Capture selector." />
+        <uie:ObjectField name="ks-snapstudio-settings-animation-select" label="Animation to Capture" object-type="UnityEngine.AnimationClip, UnityEngine" tooltip="Select which specific animation to capture when Capture All Animations is disabled." />
+      </ui:VisualElement>
+
+      <!-- Output Card -->
+      <ui:VisualElement class="card output">
+        <ui:Label text="Output" class="card-title" />
+        <ui:TextField name="ks-snapstudio-output-path" label="Output Path" value="KS_SnapStudio_Renders" tooltip="Folder name where captured sprites will be saved. Created relative to your project's Assets folder." />
+        <ui:Button name="ks-snapstudio-output-browse" text="Browse..." tooltip="Open folder browser to select a different output location." />
+      </ui:VisualElement>
+
+      <!-- Controls Card -->
+      <ui:VisualElement class="card controls">
+        <ui:Label text="Controls" class="card-title" />
+        <ui:Button name="ks-snapstudio-controls-create-scene" text="Create Capture Scene" tooltip="Set up the capture environment with proper lighting and camera. Required before capturing." />
+        <ui:Button name="ks-snapstudio-controls-refresh-ui" text="Refresh UI (Debug)" tooltip="Refresh the interface elements. Use if UI appears unresponsive." />
+        <ui:Button name="ks-snapstudio-controls-test" text="Test Configuration" tooltip="Validate your current settings without starting a full capture." />
+        <ui:Button name="ks-snapstudio-controls-start-capture" text="Start Capture" tooltip="Begin capturing animation frames. Make sure Play Mode is active and scene is set up." />
+      </ui:VisualElement>
+    </ui:ScrollView>
+
+    <!-- Status Bar -->
+    <ui:VisualElement class="status-bar">
+      <ui:Label name="status-text" text="Ready" />
+      <ui:ProgressBar name="progress-bar" value="0" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

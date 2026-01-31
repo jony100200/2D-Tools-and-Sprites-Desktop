@@ -1,0 +1,28 @@
+/* SettingsWindow.uss - Styles for Settings tab */
+
+.settings-content {
+    flex-grow: 1;
+    padding: 10px;
+}
+
+.settings-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: rgba(60, 60, 60, 0.3);
+    border-radius: 4px;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+
+.settings-section > * {
+    margin-bottom: 8px;
+}
+
+.settings-section > .no-bottom {
+    margin-bottom: 0;
+}

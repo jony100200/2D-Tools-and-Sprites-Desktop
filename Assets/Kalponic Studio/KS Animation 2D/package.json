@@ -1,0 +1,26 @@
+{
+  "name": "com.kalponicstudio.ksanimation2d",
+  "version": "2.0.0",
+  "displayName": "KS Animation 2D",
+  "description": "Code-first 2D animation system that completely solves Unity Animator Controller shortfalls. Modular, reusable, and perfect for complex 2D games.",
+  "unity": "2020.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "https://github.com/jony100200/Anomaly-Directive/blob/main/Assets/Plugins/KS%20Animation%202D/README.md",
+  "changelogUrl": "https://github.com/jony100200/Anomaly-Directive/blob/main/Assets/Plugins/KS%20Animation%202D/README.md",
+  "licensesUrl": "https://github.com/jony100200/Anomaly-Directive/blob/main/LICENSE",
+  "keywords": [
+    "animation",
+    "2d",
+    "sprite",
+    "fsm",
+    "state machine",
+    "modular",
+    "reusable"
+  ],
+  "author": {
+    "name": "Kalponic Studio",
+    "email": "contact@kalponicstudio.com",
+    "url": "https://github.com/jony100200"
+  },
+  "hideInEditor": false
+}

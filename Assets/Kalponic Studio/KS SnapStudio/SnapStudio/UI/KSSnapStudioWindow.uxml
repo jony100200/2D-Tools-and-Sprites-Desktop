@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="root-container" class="kssnapstudio-window">
+        <!-- Tab Toolbar -->
+        <uie:Toolbar name="tab-toolbar" class="tab-toolbar">
+            <!-- Tab buttons will be added programmatically -->
+        </uie:Toolbar>
+
+        <!-- Content Container -->
+        <ui:VisualElement name="content-container" class="content-container">
+            <!-- Tab content will be added here -->
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a7a0b8c8a4a8b9a7a0b8c8a4a8b9, type: 3}
+  m_Name: DefaultCharacterAnimationConfig
+  m_EditorClassIdentifier: 
+  states:
+  - stateName: Idle
+    priority: 0
+    transitionDuration: 0.1
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Walk
+    priority: 0
+    transitionDuration: 0.15
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Run
+    priority: 0
+    transitionDuration: 0.1
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Jump
+    priority: 1
+    transitionDuration: 0.05
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Fall
+    priority: 1
+    transitionDuration: 0.1
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Attack
+    priority: 1
+    transitionDuration: 0.05
+    canBeInterrupted: 1
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Hurt
+    priority: 2
+    transitionDuration: 0.02
+    canBeInterrupted: 0
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  - stateName: Death
+    priority: 3
+    transitionDuration: 0.1
+    canBeInterrupted: 0
+    customCondition: 
+    onStateEntered: 
+    onStateExited: 
+  idleState: Idle
+  walkState: Walk
+  runState: Run
+  jumpState: Jump
+  fallState: Fall
+  attackState: Attack
+  hurtState: Hurt
+  deathState: Death

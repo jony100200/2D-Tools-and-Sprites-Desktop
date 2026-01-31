@@ -1,0 +1,1092 @@
+// Assets/KalponicGames/Editor/Thumbnailer/ThumbnailerWindow.cs
+// Prefab Thumbnailer — Editor UI wired to the real controller and services.
+// Features scroll view for responsive UI across different screen resolutions.
+
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+namespace KalponicGames.KS_SnapStudio
+{
+    public sealed class ThumbnailerWindow : EditorWindow
+    {
+        private const string WINDOW_TITLE = "KSThumbSmith";
+        private const int LABEL_WIDTH = 120;
+
+        // Config & state - using reflection for ThumbSmith compatibility
+        private ThumbnailConfig config;
+        private bool showAdvanced = false;
+        private bool showPresets = false;
+    private int newEntryCount = 1; // number of entries to add when requested
+        private float progress = 0f;
+        private string statusText = "Idle";
+        private bool isRunning = false;
+        private string lastProcessedAsset = "";
+    private bool isQueueRunning = false;
+    private int queueIndex = -1;
+    private int queueTotal = 0;
+        private DateTime batchStartTime;
+        private Vector2 scrollPosition = Vector2.zero; // Scroll position for UI
+
+        // Services & controller - loaded via reflection
+        private object sceneStager;
+        private object prefabFramer;
+        private object rendererService;
+        private object fileService;
+        private object controller;
+
+        #region Menu - Disabled due to ThumbSmith integration issues
+        // [MenuItem("Kalponic/KSThumbSmith")]
+        public static void Open()
+        {
+            var win = GetWindow<ThumbnailerWindow>(utility: false, title: WINDOW_TITLE);
+            // Set reasonable minimum size that works with scroll view
+            win.minSize = new Vector2(480, 300);
+            // Set a good default size for most workflows
+            win.position = new Rect(100, 100, 520, 600);
+            win.Show();
+        }
+        #endregion
+
+        private void OnEnable()
+        {
+            config ??= ThumbnailConfig.Default();
+            BuildServicesIfNeeded();
+        }
+
+        private void OnDisable()
+        {
+            UnhookController();
+        }
+
+        private void BuildServicesIfNeeded()
+        {
+            if (sceneStager == null)
+            {
+                sceneStager = new SceneStager();
+            }
+            if (prefabFramer == null)
+            {
+                prefabFramer = new PrefabFramer((ISceneStager)sceneStager);
+            }
+            if (rendererService == null)
+            {
+                rendererService = new RendererService((ISceneStager)sceneStager);
+            }
+            if (fileService == null)
+            {
+                fileService = new FileService();
+            }
+            if (controller == null)
+            {
+                controller = new ThumbnailController((ISceneStager)sceneStager, (IPrefabFramer)prefabFramer, (IRendererService)rendererService, (IFileService)fileService);
+                HookController();
+            }
+        }
+
+        private void HookController()
+        {
+            var thumbController = controller as ThumbnailController;
+            if (thumbController != null)
+            {
+                thumbController.OnProgress += HandleProgress;
+                thumbController.OnLog += HandleLog;
+                thumbController.OnError += HandleError;
+                thumbController.OnCompleted += HandleCompleted;
+            }
+        }
+
+        private void UnhookController()
+        {
+            var thumbController = controller as ThumbnailController;
+            if (thumbController != null)
+            {
+                thumbController.OnProgress -= HandleProgress;
+                thumbController.OnLog -= HandleLog;
+                thumbController.OnError -= HandleError;
+                thumbController.OnCompleted -= HandleCompleted;
+            }
+        }
+
+        private void OnGUI()
+        {
+            EditorGUIUtility.labelWidth = LABEL_WIDTH;
+
+            // Begin scroll view to handle different window sizes and resolutions
+            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
+            
+            try
+            {
+                // Add some padding for better visual spacing
+                EditorGUILayout.Space(4);
+
+                // Queue Editor (moved to top)
+                using (new EditorGUILayout.VerticalScope("box"))
+                {
+                    GUILayout.Label("Queue", EditorStyles.boldLabel);
+
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        // Numeric input to add multiple entries quickly
+                        GUILayout.Label("Add entries:", GUILayout.Width(80));
+                        newEntryCount = EditorGUILayout.IntField(newEntryCount, GUILayout.Width(60));
+                        newEntryCount = Mathf.Clamp(newEntryCount, 1, 1000);
+
+                        if (GUILayout.Button("Add", GUILayout.Width(64)))
+                        {
+                            for (int k = 0; k < newEntryCount; k++)
+                            {
+                                config.inputQueue.Add(new ThumbnailConfig.QueueEntry());
+                            }
+                        }
+
+                        if (GUILayout.Button("Clear Disabled", GUILayout.Width(120)))
+                        {
+                            config.inputQueue.RemoveAll(e => !e.enabled);
+                        }
+
+                        if (GUILayout.Button("Select All", GUILayout.Width(90)))
+                        {
+                            for (int si = 0; si < config.inputQueue.Count; si++)
+                            {
+                                config.inputQueue[si].enabled = true;
+                            }
+                        }
+
+                        if (GUILayout.Button("Clear All", GUILayout.Width(90)))
+                        {
+                            if (EditorUtility.DisplayDialog("Clear All Queue Entries", "Remove all queue entries? This cannot be undone.", "Yes", "No"))
+                            {
+                                config.inputQueue.Clear();
+                            }
+                        }
+
+                        GUILayout.FlexibleSpace();
+                    }
+
+                    // List entries
+                    for (int i = 0; i < config.inputQueue.Count; i++)
+                    {
+                        var e = config.inputQueue[i];
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            e.enabled = EditorGUILayout.ToggleLeft(string.Empty, e.enabled, GUILayout.Width(18));
+                            e.name = EditorGUILayout.TextField(e.name, GUILayout.Width(110));
+
+                            // Input folder with pick and drag-drop
+                            e.inputFolder = EditorGUILayout.TextField(e.inputFolder);
+                            if (GUILayout.Button("Pick...", GUILayout.Width(64)))
+                            {
+                                var start = string.IsNullOrEmpty(e.inputFolder) ? Application.dataPath : e.inputFolder;
+                                var picked = EditorUtility.OpenFolderPanel("Select Input Folder", start, "");
+                                if (!string.IsNullOrEmpty(picked)) e.inputFolder = picked;
+                            }
+                            var dropRectIn = GUILayoutUtility.GetRect(18, 18, GUILayout.Width(80));
+                            DrawDragDropArea(dropRectIn, "Drop In", (path) => e.inputFolder = path, true);
+
+                            // Output folder with pick and drag-drop
+                            e.outputFolder = EditorGUILayout.TextField(e.outputFolder, GUILayout.Width(220));
+                            if (GUILayout.Button("Pick...", GUILayout.Width(64)))
+                            {
+                                var start = string.IsNullOrEmpty(e.outputFolder) ? Application.dataPath : e.outputFolder;
+                                var picked = EditorUtility.OpenFolderPanel("Select Output Folder", start, "");
+                                if (!string.IsNullOrEmpty(picked)) e.outputFolder = picked;
+                            }
+                            var dropRectOut = GUILayoutUtility.GetRect(18, 18, GUILayout.Width(80));
+                            DrawDragDropArea(dropRectOut, "Drop Out", (path) => e.outputFolder = path, true);
+                            // Show estimated prefab / capture count for this entry (fall back to global input folder)
+                            try
+                            {
+                                string countPath = !string.IsNullOrEmpty(e.inputFolder) ? e.inputFolder : config.inputFolder;
+                                if (!string.IsNullOrEmpty(countPath) && Directory.Exists(countPath))
+                                {
+                                    var prefabCountEntry = GetPrefabCount(countPath);
+                                    if (prefabCountEntry > 0)
+                                    {
+                                        var selectedAngles = config.GetSelectedAngles();
+                                        int totalCaptures = prefabCountEntry * Math.Max(1, selectedAngles.Length);
+                                        EditorGUILayout.LabelField($"({prefabCountEntry} prefabs, {totalCaptures} captures)", EditorStyles.miniLabel, GUILayout.Width(180));
+                                    }
+                                    else
+                                    {
+                                        EditorGUILayout.LabelField("(0 prefabs)", EditorStyles.miniLabel, GUILayout.Width(80));
+                                    }
+                                }
+                                else
+                                {
+                                    // empty placeholder to keep layout stable
+                                    EditorGUILayout.LabelField(string.Empty, GUILayout.Width(180));
+                                }
+                            }
+                            catch
+                            {
+                                EditorGUILayout.LabelField(string.Empty, GUILayout.Width(180));
+                            }
+
+                            // Reorder
+                            if (GUILayout.Button("Up", GUILayout.Width(40)) && i > 0)
+                            {
+                                var tmp = config.inputQueue[i - 1];
+                                config.inputQueue[i - 1] = config.inputQueue[i];
+                                config.inputQueue[i] = tmp;
+                            }
+                            if (GUILayout.Button("Down", GUILayout.Width(48)) && i < config.inputQueue.Count - 1)
+                            {
+                                var tmp = config.inputQueue[i + 1];
+                                config.inputQueue[i + 1] = config.inputQueue[i];
+                                config.inputQueue[i] = tmp;
+                            }
+
+                            // Run single entry
+                            GUI.enabled = !isRunning;
+                            if (GUILayout.Button("Run", GUILayout.Width(48)))
+                            {
+                                StartBatch(e);
+                            }
+                            GUI.enabled = true;
+
+                            if (GUILayout.Button("Remove", GUILayout.Width(64)))
+                            {
+                                config.inputQueue.RemoveAt(i);
+                                i--;
+                                continue;
+                            }
+                        }
+                    }
+
+                    EditorGUILayout.Space(4);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        GUI.enabled = !isRunning && config.inputQueue.Count > 0;
+                        if (GUILayout.Button("Run Queue", GUILayout.Height(22)))
+                        {
+                            StartQueueRun();
+                        }
+                        if (GUILayout.Button("Preview Paths", GUILayout.Height(22), GUILayout.Width(110)))
+                        {
+                            PreviewSelectedPaths();
+                        }
+                        GUI.enabled = isRunning;
+                        if (GUILayout.Button("Cancel Queue", GUILayout.Height(22)))
+                        {
+                            CancelBatch();
+                        }
+                        GUI.enabled = true;
+                    }
+                }
+
+                // Input folder with drag-and-drop support
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label("Input Folder", GUILayout.Width(LABEL_WIDTH));
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    config.inputFolder = EditorGUILayout.TextField(config.inputFolder);
+                    
+                    // Drag and drop area for input folder
+                    var inputRect = GUILayoutUtility.GetRect(0, 20);
+                    DrawDragDropArea(inputRect, "Drag folder here or click Pick...",
+                        OnInputFolderDropped, true);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Pick...", GUILayout.Width(80)))
+                        {
+                            var startPath = string.IsNullOrEmpty(config.inputFolder) ? Application.dataPath : config.inputFolder;
+                            var picked = EditorUtility.OpenFolderPanel("Select Input Folder", startPath, "");
+                            if (!string.IsNullOrEmpty(picked))
+                            {
+                                config.inputFolder = picked;
+                            }
+                        }
+                        
+                        // Quick validation feedback
+                        if (!string.IsNullOrEmpty(config.inputFolder))
+                        {
+                            if (Directory.Exists(config.inputFolder))
+                            {
+                                EditorGUILayout.LabelField("✓", GUILayout.Width(20));
+                            }
+                            else
+                            {
+                                EditorGUILayout.LabelField("✗", GUILayout.Width(20));
+                            }
+                        }
+                        
+                        GUILayout.FlexibleSpace();
+                    }
+                }
+            }
+
+            // Output folder with drag-and-drop support
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label("Output Folder", GUILayout.Width(LABEL_WIDTH));
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    config.outputFolder = EditorGUILayout.TextField(config.outputFolder);
+                    
+                    // Drag and drop area for output folder
+                    var outputRect = GUILayoutUtility.GetRect(0, 20);
+                    DrawDragDropArea(outputRect, "Drag folder here or click Pick...", 
+                        (path) => config.outputFolder = path, true);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Pick...", GUILayout.Width(80)))
+                        {
+                            var picked = EditorUtility.OpenFolderPanel("Select Output Folder", 
+                                string.IsNullOrEmpty(config.outputFolder) ? Application.dataPath : config.outputFolder, "");
+                            if (!string.IsNullOrEmpty(picked)) config.outputFolder = picked;
+                        }
+                        
+                        // Show estimated count if input is valid
+                        if (!string.IsNullOrEmpty(config.inputFolder) && Directory.Exists(config.inputFolder))
+                        {
+                            var count = GetPrefabCount(config.inputFolder);
+                            if (count > 0)
+                            {
+                                EditorGUILayout.LabelField($"({count} prefabs)", EditorStyles.miniLabel, GUILayout.Width(80));
+                            }
+                        }
+                        
+                        GUILayout.FlexibleSpace();
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(6);
+
+            // Preset configurations
+            showPresets = EditorGUILayout.Foldout(showPresets, "Quick Presets");
+            if (showPresets)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("UI Icons", EditorStyles.miniButton))
+                        ApplyUIIconPreset();
+                    if (GUILayout.Button("Marketing", EditorStyles.miniButton))
+                        ApplyMarketingPreset();
+                    if (GUILayout.Button("Documentation", EditorStyles.miniButton))
+                        ApplyDocumentationPreset();
+                    if (GUILayout.Button("Catalog", EditorStyles.miniButton))
+                        ApplyCatalogPreset();
+                }
+            }
+
+            EditorGUILayout.Space(6);
+
+            // Output basics
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                GUILayout.Label("Output", EditorStyles.boldLabel);
+                config.outputResolution = EditorGUILayout.IntPopup("Resolution",
+                    config.outputResolution,
+                    new[] { "256", "512", "1024", "2048" },
+                    new[] { 256, 512, 1024, 2048 });
+
+                config.filenameSuffix = EditorGUILayout.TextField("Filename Suffix", config.filenameSuffix);
+                config.forcePng = EditorGUILayout.ToggleLeft("Force PNG Export (preserve alpha)", config.forcePng);
+                config.mirrorFolders = EditorGUILayout.ToggleLeft("Mirror Input Folder Structure", config.mirrorFolders);
+                config.skipIfExists = EditorGUILayout.ToggleLeft("Skip If Output Exists", config.skipIfExists);
+            }
+
+            EditorGUILayout.Space(6);
+
+
+            // Camera & framing
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                GUILayout.Label("Camera & Framing", EditorStyles.boldLabel);
+                config.cameraMode = (ThumbnailConfig.CameraMode)EditorGUILayout.EnumPopup("Camera Mode", config.cameraMode);
+                config.orientation = (ThumbnailConfig.Orientation)EditorGUILayout.EnumPopup("Orientation", config.orientation);
+                config.margin = EditorGUILayout.Slider("Margin", config.margin, 0f, 0.5f);
+
+                if (config.cameraMode == ThumbnailConfig.CameraMode.Perspective)
+                {
+                    config.perspectiveFov = EditorGUILayout.Slider("Perspective FOV", config.perspectiveFov, 10f, 90f);
+                }
+
+                if (config.orientation == ThumbnailConfig.Orientation.Custom)
+                {
+                    config.customEuler = EditorGUILayout.Vector3Field("Custom Euler", config.customEuler);
+                }
+            }
+
+            EditorGUILayout.Space(6);
+
+            // Multi-Angle Capture
+            using (new EditorGUILayout.VerticalScope("box"))
+            {
+                GUILayout.Label("Multi-Angle Capture (2D Side-Scroller)", EditorStyles.boldLabel);
+                
+                EditorGUILayout.HelpBox("Select multiple angles to capture different views of your prefabs. " +
+                    "Each angle will be saved in its own subfolder (Front/Side/Back).", MessageType.Info);
+                
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    config.captureAngleFront = EditorGUILayout.ToggleLeft("Front (0°)", config.captureAngleFront, GUILayout.Width(100));
+                    config.captureAngleSide = EditorGUILayout.ToggleLeft("Side (90°)", config.captureAngleSide, GUILayout.Width(100));
+                    config.captureAngleBack = EditorGUILayout.ToggleLeft("Back (180°)", config.captureAngleBack, GUILayout.Width(100));
+                }
+                
+                // Show angle count and estimated total
+                var selectedAngles = config.GetSelectedAngles();
+                string angleInfo = $"{selectedAngles.Length} angle{(selectedAngles.Length != 1 ? "s" : "")} selected";
+                if (selectedAngles.Length > 0)
+                {
+                    var angleNames = string.Join(", ", System.Array.ConvertAll(selectedAngles, a => a.Name));
+                    angleInfo += $": {angleNames}";
+                }
+                EditorGUILayout.LabelField(angleInfo, EditorStyles.miniLabel);
+                
+                // Show total capture count
+                if (!string.IsNullOrEmpty(config.inputFolder) && Directory.Exists(config.inputFolder))
+                {
+                    var prefabCount = GetPrefabCount(config.inputFolder);
+                    if (prefabCount > 0 && selectedAngles.Length > 0)
+                    {
+                        var totalCaptures = prefabCount * selectedAngles.Length;
+                        EditorGUILayout.LabelField($"Total captures: {totalCaptures} ({prefabCount} prefabs × {selectedAngles.Length} angles)", 
+                            EditorStyles.miniLabel);
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(6);
+
+            // Advanced
+            showAdvanced = EditorGUILayout.Foldout(showAdvanced, "Advanced");
+            if (showAdvanced)
+            {
+                using (new EditorGUILayout.VerticalScope("box"))
+                {
+                    GUILayout.Label("Background & Lighting", EditorStyles.boldLabel);
+                    config.clearColor = EditorGUILayout.ColorField("Clear Color (alpha=0 for transparent)", config.clearColor);
+                    config.lightingMode = (ThumbnailConfig.LightingMode)EditorGUILayout.EnumPopup("Lighting", config.lightingMode);
+                    config.useShadows = EditorGUILayout.ToggleLeft("Soft Shadows (if lit)", config.useShadows);
+
+                    EditorGUILayout.Space(4);
+                    GUILayout.Label("Subject Handling", EditorStyles.boldLabel);
+                    config.normalizeScale = EditorGUILayout.ToggleLeft("Normalize Scale (fit largest dimension)", config.normalizeScale);
+                    config.includeParticles = EditorGUILayout.ToggleLeft("Include Particle Systems", config.includeParticles);
+                    config.forceHighestLod = EditorGUILayout.ToggleLeft("Force Highest LOD", config.forceHighestLod);
+
+                    EditorGUILayout.Space(4);
+                    GUILayout.Label("Failure Behavior", EditorStyles.boldLabel);
+                    config.failFast = EditorGUILayout.ToggleLeft("Fail Fast (stop on first error)", config.failFast);
+
+                    EditorGUILayout.Space(4);
+                    GUILayout.Label("Performance", EditorStyles.boldLabel);
+                    config.maxBatchSize = EditorGUILayout.IntField("Max Batch Size (0 = no limit)", config.maxBatchSize);
+                    config.memoryCleanupFrequency = EditorGUILayout.IntField("Memory Cleanup Frequency", config.memoryCleanupFrequency);
+                }
+            }
+
+            EditorGUILayout.Space(8);
+
+            // Run / Cancel
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUI.enabled = !isRunning;
+                if (GUILayout.Button("Run", GUILayout.Height(28)))
+                {
+                    StartBatch();
+                }
+                GUI.enabled = isRunning;
+                if (GUILayout.Button("Cancel", GUILayout.Height(28)))
+                {
+                    CancelBatch();
+                }
+                GUI.enabled = true;
+            }
+
+            // Progress & status
+            EditorGUILayout.Space(6);
+            
+            // Enhanced progress display
+            if (isQueueRunning)
+            {
+                EditorGUILayout.LabelField($"Queue: {Mathf.Clamp(queueIndex + 1, 0, queueTotal)}/{queueTotal}", EditorStyles.miniLabel);
+            }
+            else if (isRunning && !string.IsNullOrEmpty(lastProcessedAsset))
+            {
+                EditorGUILayout.LabelField("Currently Processing:", lastProcessedAsset, EditorStyles.miniLabel);
+            }
+            
+            Rect r = GUILayoutUtility.GetRect(18, 18, "TextField");
+            EditorGUI.ProgressBar(r, Mathf.Clamp01(progress), statusText);
+            EditorGUILayout.Space(2);
+
+            // Debug information
+            if (!string.IsNullOrEmpty(lastProcessedAsset))
+            {
+                EditorGUILayout.LabelField($"Last: {lastProcessedAsset}", EditorStyles.miniLabel);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                if (isRunning)
+                {
+                    GUILayout.Label("Processing... Press Cancel to stop", EditorStyles.miniLabel);
+                }
+                else
+                {
+                    GUILayout.Label("KISS • SOLID • URP • Transparent PNG", EditorStyles.miniLabel);
+                }
+            }
+            
+            // Add bottom padding for better scrolling experience
+            EditorGUILayout.Space(8);
+            }
+            finally
+            {
+                // Always end the scroll view, even if an exception occurs
+                EditorGUILayout.EndScrollView();
+            }
+        }
+
+        // ----------------- Controller hooks -----------------
+
+        private void StartBatch()
+        {
+            BuildServicesIfNeeded(); // ensure live services
+
+            // Reset UI
+            progress = 0f;
+            statusText = "Preparing…";
+            var thumbController = controller as ThumbnailController;
+            isRunning = thumbController != null ? thumbController.Start(config) : false;
+
+            if (!isRunning)
+            {
+                statusText = "Failed to start. Check Console.";
+                Repaint();
+            }
+            else
+            {
+                Repaint();
+            }
+        }
+
+        private void StartBatch(ThumbnailConfig.QueueEntry entry)
+        {
+            // Apply entry-specific paths to a temporary config copy
+            var backupIn = config.inputFolder;
+            var backupOut = config.outputFolder;
+
+            config.inputFolder = string.IsNullOrWhiteSpace(entry.inputFolder) ? backupIn : entry.inputFolder;
+            config.outputFolder = string.IsNullOrWhiteSpace(entry.outputFolder) ? backupOut : entry.outputFolder;
+
+            // Start the regular batch
+            StartBatch();
+
+            // Restore UI fields will be handled when queue continues/completes
+        }
+
+        private void CancelBatch()
+        {
+            if (!isRunning || controller == null) return;
+            // Stop the entire queue when cancelling
+            isQueueRunning = false;
+            queueIndex = -1;
+            queueTotal = 0;
+            statusText = "Cancel requested.";
+            var thumbController = controller as ThumbnailController;
+            thumbController?.Cancel();
+        }
+
+        private void HandleProgress(ThumbnailProgress p)
+        {
+            progress = p.Normalized;
+            statusText = $"[{p.Index}/{p.Total}] {p.Message}";
+            lastProcessedAsset = p.CurrentAssetPath;
+            Repaint();
+        }
+
+        private void StartQueueRun()
+        {
+            if (config.inputQueue == null || config.inputQueue.Count == 0) return;
+
+            // Build a list of enabled entries
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            if (enabled.Count == 0)
+            {
+                statusText = "No enabled queue entries.";
+                Repaint();
+                return;
+            }
+
+            isQueueRunning = true;
+            queueIndex = -1;
+            queueTotal = enabled.Count;
+
+            // Kick off first item
+            StartNextQueueItem();
+        }
+
+        private void StartNextQueueItem()
+        {
+            if (!isQueueRunning)
+            {
+                queueIndex = -1;
+                queueTotal = 0;
+                return;
+            }
+
+            // Build enabled list each time to reflect any runtime changes
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            queueIndex++;
+
+            if (queueIndex >= enabled.Count)
+            {
+                // Queue finished
+                isQueueRunning = false;
+                queueIndex = -1;
+                queueTotal = 0;
+                statusText = "Queue finished.";
+                Repaint();
+                return;
+            }
+
+            var entry = enabled[queueIndex];
+            statusText = $"Queue: {queueIndex + 1}/{enabled.Count} - {entry.name ?? entry.inputFolder}";
+            Repaint();
+
+            // Apply entry and start batch
+            StartBatch(entry);
+        }
+
+        private void HandleLog(string msg)
+        {
+            Debug.Log("[Thumbnailer] " + msg);
+        }
+
+        private void HandleError(string msg)
+        {
+            Debug.LogError("[Thumbnailer] " + msg);
+            statusText = "Error: " + msg;
+            Repaint();
+        }
+
+        private void HandleCompleted()
+        {
+            isRunning = false;
+            progress = 1f;
+            statusText = "Done.";
+            Repaint();
+
+            // If we were running a queue, advance to next
+            if (isQueueRunning)
+            {
+                StartNextQueueItem();
+            }
+        }
+
+        private void PreviewSelectedPaths()
+        {
+            // Collect enabled queue entries (or all if none enabled)
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            if (enabled.Count == 0) enabled = new System.Collections.Generic.List<ThumbnailConfig.QueueEntry>(config.inputQueue);
+
+            var preview = PreviewPathsWindow.OpenWindow(config, enabled);
+            preview.Show();
+        }
+
+        // --------------------- UI Helper Methods ---------------------
+
+        private void DrawDragDropArea(Rect rect, string label, Action<string> onPathDropped, bool acceptFolders)
+        {
+            var controlID = GUIUtility.GetControlID(FocusType.Passive);
+            var eventType = Event.current.type;
+
+            switch (eventType)
+            {
+                case EventType.DragUpdated:
+                case EventType.DragPerform:
+                    if (rect.Contains(Event.current.mousePosition))
+                    {
+                        bool validDrag = false;
+                        string draggedPath = null;
+
+                        if (DragAndDrop.paths.Length > 0)
+                        {
+                            var path = DragAndDrop.paths[0];
+                            if (acceptFolders && Directory.Exists(path))
+                            {
+                                validDrag = true;
+                                draggedPath = path;
+                            }
+                            else if (!acceptFolders && File.Exists(path))
+                            {
+                                validDrag = true;
+                                draggedPath = path;
+                            }
+                        }
+
+                        if (validDrag)
+                        {
+                            DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+                            if (eventType == EventType.DragPerform)
+                            {
+                                DragAndDrop.AcceptDrag();
+                                onPathDropped?.Invoke(draggedPath);
+                                GUI.changed = true;
+                            }
+                        }
+                        else
+                        {
+                            DragAndDrop.visualMode = DragAndDropVisualMode.Rejected;
+                        }
+                        Event.current.Use();
+                    }
+                    break;
+
+                case EventType.Repaint:
+                    var style = new GUIStyle(EditorStyles.helpBox)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 10
+                    };
+                    
+                    if (rect.Contains(Event.current.mousePosition) && DragAndDrop.paths.Length > 0)
+                    {
+                        style.normal.textColor = UnityEngine.Color.white;
+                        style.normal.background = Texture2D.whiteTexture;
+                    }
+                    
+                    GUI.Box(rect, label, style);
+                    break;
+            }
+        }
+
+        private int GetPrefabCount(string folderPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+                    return 0;
+
+                // Convert to project-relative path if possible
+                string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                string fullPath = Path.GetFullPath(folderPath);
+                
+                if (!fullPath.StartsWith(projectRoot))
+                {
+                    // Outside project, can't easily count via AssetDatabase
+                    return 0;
+                }
+
+                string projectPath = fullPath.Substring(projectRoot.Length + 1).Replace('\\', '/');
+                
+                // Use AssetDatabase to find prefabs
+                string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { projectPath });
+                return guids.Length;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        // -------------------- Preview Paths Window --------------------
+        private class PreviewPathsWindow : EditorWindow
+        {
+            private ThumbnailConfig config;
+            private System.Collections.Generic.List<ThumbnailConfig.QueueEntry> entries;
+            private Vector2 scroll;
+
+            public static PreviewPathsWindow OpenWindow(ThumbnailConfig cfg, System.Collections.Generic.List<ThumbnailConfig.QueueEntry> entries)
+            {
+                var w = CreateInstance<PreviewPathsWindow>();
+                w.titleContent = new GUIContent("Preview Paths");
+                w.config = cfg;
+                w.entries = entries;
+                w.minSize = new Vector2(480, 300);
+                return w;
+            }
+
+            private void OnGUI()
+            {
+                GUILayout.Label("Planned output paths (no files will be written):", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
+
+                if (entries == null || entries.Count == 0)
+                {
+                    EditorGUILayout.LabelField("No queue entries selected.");
+                    return;
+                }
+
+                scroll = EditorGUILayout.BeginScrollView(scroll);
+
+                foreach (var e in entries)
+                {
+                    EditorGUILayout.BeginVertical("box");
+                    EditorGUILayout.LabelField(e.name ?? Path.GetFileName(e.inputFolder ?? string.Empty), EditorStyles.boldLabel);
+
+                    var input = string.IsNullOrEmpty(e.inputFolder) ? config.inputFolder : e.inputFolder;
+                    var output = string.IsNullOrEmpty(e.outputFolder) ? config.outputFolder : e.outputFolder;
+
+                    EditorGUILayout.LabelField("Input:", input);
+                    EditorGUILayout.LabelField("Output Root:", output);
+
+                    // Try to find some prefabs under this input (just demonstrate with one example path per entry)
+                    string samplePrefab = "";
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(input) && Directory.Exists(input))
+                        {
+                            var files = Directory.GetFiles(input, "*.prefab", SearchOption.AllDirectories);
+                            if (files.Length > 0)
+                            {
+                                // Convert to AssetDatabase-style path if possible
+                                var proj = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                                var full = Path.GetFullPath(files[0]);
+                                if (full.StartsWith(proj))
+                                {
+                                    samplePrefab = full.Substring(proj.Length + 1).Replace('\\', '/');
+                                }
+                                else
+                                {
+                                    samplePrefab = Path.GetFileName(files[0]);
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    var selectedAngles = config.GetSelectedAngles();
+                    if (selectedAngles.Length == 0)
+                    {
+                        EditorGUILayout.LabelField("No angles selected.");
+                    }
+                    else if (string.IsNullOrEmpty(samplePrefab))
+                    {
+                        EditorGUILayout.LabelField("No prefabs found under this input to preview.");
+                    }
+                    else
+                    {
+                        // Compute paths using same logic as controller
+                        foreach (var a in selectedAngles)
+                        {
+                            string path = ComputePreviewPath(config, input, output, samplePrefab, a);
+                            EditorGUILayout.LabelField(a.Name + ":", path);
+                        }
+                    }
+
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(4);
+                }
+
+                EditorGUILayout.EndScrollView();
+
+                GUILayout.FlexibleSpace();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Close", GUILayout.Width(100))) Close();
+                }
+            }
+
+            private string ComputePreviewPath(ThumbnailConfig cfg, string inputFolder, string outputFolder, string prefabAssetPath, CaptureAngle a)
+            {
+                // Mirror logic: compute prefab dir relative to inputFolder if possible
+                var prefabDir = Path.GetDirectoryName(prefabAssetPath)?.Replace('\\', '/');
+                var inputProjectRel = ThumbnailController.AbsoluteToProjectPath(ThumbnailController.ResolveAbsolutePath(inputFolder));
+
+                string relativeSubdir = string.Empty;
+                if (cfg.mirrorFolders && !string.IsNullOrEmpty(prefabDir))
+                {
+                    if (!string.IsNullOrEmpty(inputProjectRel) && prefabDir.StartsWith(inputProjectRel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        relativeSubdir = prefabDir.Substring(inputProjectRel.Length).TrimStart('/');
+                    }
+                    else if (prefabDir.StartsWith("Assets/"))
+                    {
+                        relativeSubdir = prefabDir.Substring("Assets/".Length).TrimStart('/');
+                    }
+                }
+
+                string fileName = Path.GetFileNameWithoutExtension(prefabAssetPath) + (cfg.filenameSuffix ?? "_thumb") + "_" + cfg.outputResolution + ".png";
+
+                string angleDir = string.IsNullOrEmpty(relativeSubdir)
+                    ? Path.Combine(ThumbnailController.ResolveAbsolutePath(outputFolder), a.FolderName)
+                    : Path.Combine(ThumbnailController.ResolveAbsolutePath(outputFolder), relativeSubdir, a.FolderName);
+
+                return Path.Combine(angleDir, fileName);
+            }
+        }
+
+        // Handle a folder dropped onto the main Input Folder area.
+        // If the folder contains subfolders, offer to create queue entries for each.
+        private void OnInputFolderDropped(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return;
+
+            // Set the main input folder by default
+            config.inputFolder = path;
+
+            try
+            {
+                var subs = Directory.GetDirectories(path);
+                if (subs == null || subs.Length == 0)
+                {
+                    // no subfolders, just set the input folder
+                    Repaint();
+                    return;
+                }
+
+                // Ask user what to do
+                int count = subs.Length;
+                string msg = $"Detected {count} subfolder{(count==1?"":"s")} in the dropped folder.\n\nCreate a queue entry for each subfolder?";
+                int choice = EditorUtility.DisplayDialogComplex("Add Subfolders to Queue", msg, "Create Entries", "Cancel", "Use as Input Folder Only");
+
+                // DisplayDialogComplex returns 0 = OK (first), 1 = Cancel (second), 2 = alt (third)
+                if (choice == 1)
+                {
+                    // Cancel
+                    return;
+                }
+
+                if (choice == 2)
+                {
+                    // Use as input folder only, already set above
+                    Repaint();
+                    return;
+                }
+
+                // choice == 0 -> Create Entries
+                const int MAX_AUTOCREATE = 1000;
+                if (subs.Length > MAX_AUTOCREATE)
+                {
+                    if (!EditorUtility.DisplayDialog("Too many subfolders", $"Found {subs.Length} subfolders — creating that many entries may be slow. Continue?", "Yes", "No"))
+                    {
+                        return;
+                    }
+                }
+
+                // Create entries for each subfolder
+                foreach (var d in subs)
+                {
+                    var name = Path.GetFileName(d.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    var entry = new ThumbnailConfig.QueueEntry();
+                    entry.inputFolder = d;
+                    entry.name = name;
+                    // If an output folder is set, create a sibling output subfolder by default
+                    if (!string.IsNullOrEmpty(config.outputFolder))
+                    {
+                        try
+                        {
+                            entry.outputFolder = Path.Combine(config.outputFolder, name);
+                        }
+                        catch
+                        {
+                            entry.outputFolder = config.outputFolder;
+                        }
+                    }
+                    entry.enabled = true;
+                    config.inputQueue.Add(entry);
+                }
+
+                statusText = $"Added {subs.Length} queue entries from '{Path.GetFileName(path)}'.";
+                Repaint();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Error processing dropped folder: " + ex);
+            }
+        }
+
+        // --------------------- Preset Configurations ---------------------
+
+        private void ApplyUIIconPreset()
+        {
+            config.outputResolution = 256;
+            config.cameraMode = ThumbnailConfig.CameraMode.Orthographic;
+            config.orientation = ThumbnailConfig.Orientation.Front;
+            config.margin = 0.15f;
+            config.lightingMode = ThumbnailConfig.LightingMode.NoneUnlit;
+            config.useShadows = false;
+            config.normalizeScale = true;
+            config.includeParticles = false;
+            config.forceHighestLod = true;
+            config.clearColor = new UnityEngine.Color(0f, 0f, 0f, 0f);
+            config.filenameSuffix = "_icon";
+            
+            // UI icons typically only need front view
+            config.captureAngleFront = true;
+            config.captureAngleSide = false;
+            config.captureAngleBack = false;
+            
+            Repaint();
+        }
+
+        private void ApplyMarketingPreset()
+        {
+            config.outputResolution = 1024;
+            config.cameraMode = ThumbnailConfig.CameraMode.Perspective;
+            config.orientation = ThumbnailConfig.Orientation.Isometric;
+            config.margin = 0.10f;
+            config.lightingMode = ThumbnailConfig.LightingMode.Studio3Point;
+            config.useShadows = true;
+            config.normalizeScale = false;
+            config.includeParticles = true;
+            config.forceHighestLod = true;
+            config.clearColor = new UnityEngine.Color(0f, 0f, 0f, 0f);
+            config.filenameSuffix = "_marketing";
+            
+            // Marketing materials often benefit from multiple angles
+            config.captureAngleFront = true;
+            config.captureAngleSide = true;
+            config.captureAngleBack = false;
+            
+            Repaint();
+        }
+
+        private void ApplyDocumentationPreset()
+        {
+            config.outputResolution = 512;
+            config.cameraMode = ThumbnailConfig.CameraMode.Orthographic;
+            config.orientation = ThumbnailConfig.Orientation.Isometric;
+            config.margin = 0.20f;
+            config.lightingMode = ThumbnailConfig.LightingMode.NoneUnlit;
+            config.useShadows = false;
+            config.normalizeScale = true;
+            config.includeParticles = false;
+            config.forceHighestLod = true;
+            config.clearColor = new UnityEngine.Color(1f, 1f, 1f, 1f); // White background for docs
+            config.filenameSuffix = "_doc";
+            
+            // Documentation typically shows front and side for technical reference
+            config.captureAngleFront = true;
+            config.captureAngleSide = true;
+            config.captureAngleBack = false;
+            
+            Repaint();
+        }
+
+        private void ApplyCatalogPreset()
+        {
+            config.outputResolution = 512;
+            config.cameraMode = ThumbnailConfig.CameraMode.Orthographic;
+            config.orientation = ThumbnailConfig.Orientation.Front;
+            config.margin = 0.10f;
+            config.lightingMode = ThumbnailConfig.LightingMode.NoneUnlit;
+            config.useShadows = false;
+            config.normalizeScale = true;
+            config.includeParticles = false;
+            config.forceHighestLod = true;
+            config.clearColor = new UnityEngine.Color(0f, 0f, 0f, 0f);
+            config.filenameSuffix = "_catalog";
+            
+            // Catalog view typically shows just front view for consistency
+            config.captureAngleFront = true;
+            config.captureAngleSide = false;
+            config.captureAngleBack = false;
+            
+            Repaint();
+        }
+    }
+}

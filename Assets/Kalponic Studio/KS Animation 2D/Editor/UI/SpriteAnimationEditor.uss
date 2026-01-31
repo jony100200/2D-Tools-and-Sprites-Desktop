@@ -1,0 +1,46 @@
+:root {
+    --background-dark: rgb(28, 28, 28);
+    --panel-dark: rgb(40, 40, 40);
+    --border: rgb(64, 64, 64);
+    --accent: rgb(215, 144, 64);
+    --text: rgb(220, 220, 220);
+}
+
+.sae-root {
+    padding: 6px;
+    background-color: var(--background-dark);
+    color: var(--text);
+}
+
+.sae-toolbar {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.sae-preview {
+    height: 260px;
+    margin-top: 6px;
+    background-color: var(--panel-dark);
+    border: 1px solid var(--border);
+}
+
+.sae-scrubber {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.sae-clipinfo {
+    margin-top: 2px;
+    color: rgb(200, 200, 200);
+}
+
+.sae-split {
+    margin-top: 6px;
+}
+
+.sae-event-panel {
+    padding-left: 8px;
+    padding-right: 8px;
+}

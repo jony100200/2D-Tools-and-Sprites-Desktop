@@ -1,0 +1,133 @@
+.window-root {
+  background-color: #202225;
+  padding: 16px;
+  flex-grow: 1;
+  font-family: Inter;
+  font-size: 12px;
+}
+
+.header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #00D4FF;
+  padding-bottom: 8px;
+}
+
+.title {
+  font-size: 18px;
+  color: #00D4FF;
+  font-weight: bold;
+}
+
+.version {
+  font-size: 12px;
+  color: #cccccc;
+}
+
+.content-grid {
+  flex-grow: 1;
+}
+
+.card {
+  background-color: #2a2d32;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #404040;
+}
+
+.card-title {
+  font-size: 14px;
+  color: #00D4FF;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.card .unity-base-field {
+  margin-bottom: 8px;
+}
+
+.card .unity-base-field__label {
+  color: #cccccc;
+}
+
+.card .unity-base-field__input {
+  background-color: #1a1d22;
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+.card .unity-toggle {
+  margin-bottom: 8px;
+}
+
+.card .unity-toggle__label {
+  color: #cccccc;
+}
+
+.card .unity-button {
+  margin-right: 8px;
+  background-color: #00D4FF;
+  color: #202225;
+  border-radius: 4px;
+}
+
+.card .unity-button:hover {
+  background-color: #00B4DF;
+}
+
+.status-bar {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #404040;
+}
+
+.status-text {
+  color: #cccccc;
+  font-size: 12px;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  margin-left: 16px;
+}
+
+/* Tooltip styles */
+.tooltip {
+  background-color: #333333;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 11px;
+  max-width: 300px;
+  word-wrap: break-word;
+  border: 1px solid #555555;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Target field container and validation indicator */
+.target-field-container {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.validation-indicator {
+  width: 16px;
+  height: 16px;
+  background-color: #ff4444;
+  border-radius: 50%;
+  margin-left: 8px;
+  margin-top: 4px;
+  display: none;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 4px rgba(255, 68, 68, 0.5);
+}
+
+.validation-indicator.visible {
+  display: flex;
+}

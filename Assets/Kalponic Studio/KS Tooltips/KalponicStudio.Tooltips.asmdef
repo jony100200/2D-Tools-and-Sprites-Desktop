@@ -1,0 +1,16 @@
+{
+    "name": "KalponicStudio.Tooltips",
+    "rootNamespace": "KalponicStudio.Tooltips",
+    "references": [
+        "UnityEngine.UIElements"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="thumbsmith-content" class="thumbsmith-container">
+        <ui:Label text="Thumbnail Generation" class="section-title" />
+        <ui:Label text="Coming Soon..." class="placeholder-text" />
+        <ui:Label text="This feature will allow batch generation of character thumbnails with customizable templates and automatic sprite extraction." class="description-text" />
+    </ui:VisualElement>
+</ui:UXML></content>
+<parameter name="filePath">f:\Unity Workplace\Unity Tools Development\Assets\Kalponic Studio\KS SnapStudio\SnapStudio\UI\Zones\ThumbSmith\ThumbSmithWindow.uxml

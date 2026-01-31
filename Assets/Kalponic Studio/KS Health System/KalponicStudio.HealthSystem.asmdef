@@ -1,0 +1,17 @@
+{
+    "name": "KalponicStudio.HealthSystem",
+    "rootNamespace": "",
+    "references": [
+        "KalponicStudio.SO_Framework",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

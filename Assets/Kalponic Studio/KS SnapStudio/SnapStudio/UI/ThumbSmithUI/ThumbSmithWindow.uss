@@ -1,0 +1,29 @@
+/* ThumbSmith Window Styles */
+
+.thumbsmith-container {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: rgb(255, 255, 255);
+    margin-bottom: 16px;
+}
+
+.placeholder-text {
+    font-size: 24px;
+    color: rgb(150, 150, 150);
+    margin-bottom: 12px;
+}
+
+.description-text {
+    font-size: 14px;
+    color: rgb(180, 180, 180);
+    text-align: center;
+    max-width: 400px;
+    white-space: normal;
+}

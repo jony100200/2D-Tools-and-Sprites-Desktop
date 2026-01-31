@@ -1,0 +1,27 @@
+{
+  "name": "com.kalponicgames.ks-snapstudio",
+  "version": "1.0.1",
+  "displayName": "KS SnapStudio",
+  "description": "Professional 3D to 2D animation capture tool for Unity. Transform your 3D characters into high-quality 2D sprite animations with automated batch processing and modular character support.",
+  "unity": "2021.3",
+  "unityRelease": "0f1",
+  "keywords": [
+    "animation",
+    "sprites",
+    "2d",
+    "capture",
+    "modular",
+    "character",
+    "unity",
+    "editor",
+    "game development",
+    "asset production"
+  ],
+  "author": {
+    "name": "Kalponic Games",
+    "email": "kalponicgames@gmail.com"
+  },
+  "hideInEditor": false,
+  "license": "SEE LICENSE IN LICENSE.md",
+  "dependencies": {}
+}

@@ -1,0 +1,42 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:ScrollView class="settings-content">
+        <!-- General Settings Section -->
+        <ui:VisualElement class="settings-section">
+            <ui:Label text="General Settings" class="section-title" />
+            <ui:Toggle name="ks-settings-enable-tooltips" label="Enable Tooltips" value="true" tooltip="Show helpful tooltips throughout the interface" />
+            <ui:Toggle name="ks-settings-auto-save" label="Auto-save Settings" value="true" tooltip="Automatically save settings changes" class="no-bottom" />
+        </ui:VisualElement>
+
+        <!-- Default Values Section -->
+        <ui:VisualElement class="settings-section">
+            <ui:Label text="Default Capture Values" class="section-title" />
+            <uie:IntegerField name="ks-settings-default-width" label="Default Width" value="1024" tooltip="Default output width for new captures" />
+            <uie:IntegerField name="ks-settings-default-height" label="Default Height" value="1024" tooltip="Default output height for new captures" />
+            <uie:IntegerField name="ks-settings-default-fps" label="Default FPS" value="24" tooltip="Default frames per second for captures" class="no-bottom" />
+        </ui:VisualElement>
+
+        <!-- Output Settings Section -->
+        <ui:VisualElement class="settings-section">
+            <ui:Label text="Output Settings" class="section-title" />
+            <ui:TextField name="ks-settings-default-output-path" label="Default Output Path" value="KS_SnapStudio_Renders" tooltip="Default folder for saved captures" />
+            <ui:Button name="ks-settings-browse-output-path" text="Browse..." tooltip="Choose default output folder" />
+            <ui:Toggle name="ks-settings-organize-by-date" label="Organize by Date" value="true" tooltip="Create dated subfolders for captures" class="no-bottom" />
+        </ui:VisualElement>
+
+        <!-- Integration Settings Section -->
+        <ui:VisualElement class="settings-section">
+            <ui:Label text="Integration Settings" class="section-title" />
+            <ui:Toggle name="ks-settings-enable-thumbsmith-integration" label="Enable ThumbSmith Integration" value="true" tooltip="Allow communication with ThumbSmith standalone" />
+            <ui:TextField name="ks-settings-thumbsmith-path" label="ThumbSmith Install Path" tooltip="Path to ThumbSmith executable (auto-detected)" class="no-bottom" />
+        </ui:VisualElement>
+
+        <!-- Advanced Settings Section -->
+        <ui:VisualElement class="settings-section">
+            <ui:Label text="Advanced Settings" class="section-title" />
+            <ui:Toggle name="ks-settings-enable-debug-logging" label="Debug Logging" value="false" tooltip="Enable detailed logging for troubleshooting" />
+            <ui:Button name="ks-settings-reset-all" text="Reset All Settings" tooltip="Restore all settings to defaults" />
+            <ui:Button name="ks-settings-export-settings" text="Export Settings" tooltip="Save settings to file" />
+            <ui:Button name="ks-settings-import-settings" text="Import Settings" tooltip="Load settings from file" class="no-bottom" />
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>
