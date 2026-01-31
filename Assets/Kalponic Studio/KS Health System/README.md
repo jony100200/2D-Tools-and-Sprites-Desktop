@@ -1,259 +1,158 @@
-# KS Health System - Scene Setup Guide
+# KS Health System (Pro) - Modular Vitality Framework
 
-## 🎯 **Quick Scene Setup (5 Minutes)**
+Updated: January 31, 2026
 
-### **Step 1: Create Player GameObject**
-```
-Hierarchy → Right-click → Create Empty
-Name: "Player"
-Add Components:
-- Rigidbody2D (for physics)
-- SpriteRenderer (for visuals)
-- Any movement script
-```
-
-### **Step 2: Add Health System**
-```
-Select Player → Add Component → HealthSystem
-
-Inspector Settings:
-- Max Health: 100
-- Current Health: 100
-- Enable Invulnerability: true
-- Invulnerability Duration: 1.0
-- Regenerate Health: false (or true for auto-heal)
-```
-
-### **Step 3: Add Visual Effects (Optional)**
-```
-Select Player → Add Component → HealthVisualSystem
-
-Required Setup:
-- Drag Player's SpriteRenderer to "Main Renderer"
-- Create UI Images for screen flash (optional)
-- Add Particle Systems (optional)
-- Add AudioSource + audio clips (optional)
-```
-
-### **Step 4: Create Event Channel**
-```
-Project Window → Right-click → Create → Kalponic Studio → Health → Event Channel
-Name: "PlayerHealthEvents"
-Save in: Assets/_Project/Scripts/KS Health System/Resources/
-```
-
-### **Step 5: Connect Events**
-```
-Select Player:
-- Drag PlayerHealthEvents to HealthSystem → Health Events
-- Drag PlayerHealthEvents to HealthVisualSystem → Health Events
-```
+This system provides modular health, shields, status effects, visuals, and UI for many game types.
+Use only what you need. Wire with C# events or UnityEvents.
 
 ---
 
-## 🧪 **Test Your Setup**
+## 1) What is included
 
-### **Create Test Script**
-```csharp
-using UnityEngine;
-using KalponicStudio.Health;
+Core
+- Health (damage, heal, regen, invulnerability, mitigation)
+- Damage types and resistances
+- Shield absorption (optional)
+- Downed / revive state (optional)
 
-public class HealthTester : MonoBehaviour
-{
-    [SerializeField] private HealthSystem health;
+Status
+- Poison, regeneration, speed boost
+- Stacking modes: refresh, extend, stack
 
-    void Update()
-    {
-        // Press D to take damage
-        if (Input.GetKeyDown(KeyCode.D))
-            health.TakeDamage(20);
+Events
+- C# events for code
+- UnityEvents for Inspector
+- Optional ScriptableObject event channel
 
-        // Press H to heal
-        if (Input.GetKeyDown(KeyCode.H))
-            health.Heal(15);
+UI and Visuals (optional)
+- Health bar, text, icon, controller, manager
+- Screen flash, tint, shake, particles, audio, low-health warning
 
-        // Press K to die
-        if (Input.GetKeyDown(KeyCode.K))
-            health.Kill();
-    }
-}
-```
-
-### **Add to Scene**
-```
-Create Empty GameObject → Name: "HealthTester"
-Add Component → HealthTester script
-Drag Player's HealthSystem to the Health field
-```
-
-### **Test Results**
-- **D key**: Should flash red, take 20 damage
-- **H key**: Should flash green, heal 15 health
-- **K key**: Should trigger death effects
+Profiles
+- HealthProfileSO for plug-and-play presets
 
 ---
 
-## 🎨 **Visual Effects Setup**
+## 1.5) Recent updates
 
-### **Screen Flash (Recommended)**
-```
-1. Create UI Canvas (if none exists)
-2. Add UI → Image (name: "DamageFlash")
-3. Set Color: Red (0,0,0,0) - transparent
-4. Drag to HealthVisualSystem → Damage Flash Image
-5. Repeat for Heal Flash with green color
-```
-
-### **Camera Shake (Optional)**
-```
-1. Add CameraShake component to Main Camera
-2. Drag Main Camera to HealthVisualSystem → Camera Shake
-3. Adjust shake intensity in HealthVisualSystem
-```
-
-### **Particles (Optional)**
-```
-1. Create Particle System on Player
-2. Drag to HealthVisualSystem → Damage/Heal Particles
-3. Configure particle effects as desired
-```
+- Damage types + mitigation (flat/percent + resistances)
+- Downed / revive state with events
+- Status effect stacking rules
+- HealthProfileSO presets
+- C# events as primary API (UnityEvents still available)
 
 ---
 
-## 🔊 **Audio Setup (Optional)**
+## 2) Quick Start (minimal setup)
 
-### **Add Audio**
-```
-1. Add AudioSource to Player
-2. Drag AudioSource to HealthVisualSystem
-3. Add audio clips for:
-   - Damage Sound
-   - Heal Sound
-   - Death Sound
-   - Low Health Sound
-```
+1) Add `HealthSystem` to your player/enemy.
+2) (Optional) Add `ShieldSystem`, `StatusEffectSystem`, `HealthVisualSystem`.
+3) (Optional) Add `HealthUIController` and UI components from `UI/`.
+4) (Optional) Create a `HealthProfileSO` and apply it at runtime or in a setup script.
+
+That is enough to be fully functional.
 
 ---
 
-## 📊 **UI Health Bar (Optional)**
+## 3) Recommended setup by game type
 
-### **Create Health Bar**
-```csharp
-using UnityEngine.UI;
+Shmup (Sky Force style)
+- HealthSystem + ShieldSystem + HealthVisualSystem
+- UI: simple health bar + boss bar (if needed)
 
-public class HealthBar : MonoBehaviour
-{
-    [SerializeField] private HealthSystem health;
-    [SerializeField] private Slider slider;
+Metroidvania
+- HealthSystem + StatusEffectSystem + optional downed/revive
+- UI: health bar + text
 
-    void Start()
-    {
-        slider.maxValue = health.MaxHealth;
-        slider.value = health.CurrentHealth;
-    }
+Tower Defense
+- HealthSystem + damage types + resistances
+- UI: world-space bars (many units)
 
-    void Update()
-    {
-        slider.value = health.CurrentHealth;
-    }
-}
-```
+RTS
+- HealthSystem + damage types + resistances + upgrades (external)
+- UI: world-space bars + selection UI
 
-### **Setup in Scene**
-```
-1. Create UI Canvas
-2. Add UI Slider
-3. Add HealthBar script to Canvas
-4. Drag Player HealthSystem to script
-5. Drag Slider to script
-```
+Action RPG
+- HealthSystem + StatusEffectSystem + downed/revive
+- UI: health + status icons
 
 ---
 
-## � **Common Issues**
+## 4) How to use events
 
-### **"HealthSystem not found"**
-- Make sure HealthSystem component is added to Player
-- Check script execution order if needed
+Code (C# events)
+- HealthSystem: `HealthChanged`, `DamageTaken`, `Healed`, `Death`, `Downed`, `Revived`
+- ShieldSystem: `ShieldChanged`, `ShieldAbsorbed`, `ShieldDepleted`, `ShieldRestored`
+- StatusEffectSystem: `EffectApplied`, `EffectExpired`
 
-### **"Event channel not working"**
-- Verify event channel is assigned to both systems
-- Check that listeners are properly subscribed
+Inspector (UnityEvents)
+- UnityEvents are still available in each system for drag-and-drop wiring.
 
-### **"Visual effects not showing"**
-- Ensure SpriteRenderer is assigned to HealthVisualSystem
-- Check that UI Images are properly set up
-- Verify particle systems are configured
-
-### **"Audio not playing"**
-- Add AudioSource component to Player
-- Assign audio clips in HealthVisualSystem
-- Check volume settings
+Event Channel (optional)
+- `HealthEventChannelSO` can be assigned if you prefer ScriptableObject-based events.
 
 ---
 
-## ✅ **Success Checklist**
+## 5) Damage types and mitigation
 
-- [ ] Player GameObject exists with Rigidbody2D
-- [ ] HealthSystem component added and configured
-- [ ] HealthVisualSystem component added (optional)
-- [ ] HealthEventChannelSO created and assigned
-- [ ] Test script working (D/H/K keys)
-- [ ] Visual effects configured (optional)
-- [ ] Audio working (optional)
-- [ ] UI health bar connected (optional)
+- `DamageType` includes Generic, Physical, Fire, Ice, Poison, Electric, True.
+- Flat and percent mitigation are applied unless damage is True or IgnoreMitigation is set.
+- Damage can optionally bypass shields.
 
 ---
 
-## 🚀 **Next Steps**
+## 6) Status effects and stacking
 
-1. **Replace test script** with actual game logic
-2. **Add enemy health** using same setup
-3. **Connect to game UI** (HUD, menus)
-4. **Add shield system** if needed
-5. **Test edge cases** (0 health, max health, etc.)
+Each effect supports:
+- Duration and tick interval
+- Amount per tick
+- Stacking mode (Refresh, Extend, Stack)
+- Max stacks
 
-**Your health system is now ready for gameplay!** 🎮
+Default behavior:
+- Poison: stacks (up to 5)
+- Regeneration: refresh
+- Speed Boost: refresh
 
 ---
 
-## 🎨 **UI Components (NEW!)**
+## 7) Downed / Revive
 
-The health system now includes a complete set of modular UI components in the `UI/` folder:
+Optional flow:
+- On lethal damage: enter Downed state instead of Death
+- Revive restores health and exits Downed
+- If timer expires: Death fires
 
-### **HealthUIController**
-Main coordinator that manages health bar, text, and icon components automatically.
+---
 
-### **HealthBar**
-- Customizable gradient colors (red→yellow→green)
-- Smooth animations
-- Custom sprites support
-- Invert fill direction option
+## 8) Health Profiles
 
-### **HealthText**
-- Multiple formats: "50/100", "50%", "HP: 50/100 (50%)"
-- Health-based color gradients
-- TextMeshPro support
-- Animated value changes
+`HealthProfileSO` can configure:
+- Health settings
+- Mitigation and resistances
+- Downed / revive settings
+- Invulnerability settings
+- Shield settings (if present)
 
-### **HealthIcon**
-- State-based icons (healthy/damaged/critical)
-- Configurable health thresholds
-- Color tinting per state
-- Smooth transitions
+Use this for fast setup across many enemies/units.
 
-### **HealthUIManager**
-- Manage multiple health UIs (player + enemies)
-- Batch operations
-- Utility methods for creating UIs
+---
 
-**Quick UI Setup:**
-```
-1. Add HealthUIController to a Canvas GameObject
-2. Add HealthBar/HealthText/HealthIcon as children
-3. Assign HealthSystem to the controller
-4. Customize colors/icons as needed
-```
+## 9) Common issues
 
-See `UI/README.md` for detailed documentation!</content>
-<parameter name="filePath">f:\Unity Workplace\Anomaly Directive\Assets\_Project\Scripts\KS Health System\README.md
+- If no events fire, check if you subscribed to C# events or assigned UnityEvents.
+- If a shield exists but damage hits health, ensure `ShieldSystem` is on the same object.
+- If low health warning does not show, ensure `HealthVisualSystem` has a low health overlay image.
+
+---
+
+## 10) Notes on modularity
+
+You can use any subset:
+- Health only
+- Health + UI
+- Health + Shield + UI
+- Health + Status + Visuals
+- Full setup
+
+This is designed to remain clear, simple, and easy to debug.

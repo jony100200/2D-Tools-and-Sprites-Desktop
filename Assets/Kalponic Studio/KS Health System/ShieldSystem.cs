@@ -191,6 +191,13 @@ namespace KalponicStudio.Health
             UpdateShieldVisual();
         }
 
+        public void ConfigureRegeneration(float rate, float delay, bool rechargeAfterDamage)
+        {
+            shieldRegenerationRate = Mathf.Max(0f, rate);
+            regenerationDelay = Mathf.Max(0f, delay);
+            shieldRechargesAfterDamage = rechargeAfterDamage;
+        }
+
         private void UpdateShieldVisual()
         {
             if (shieldRenderer == null) return;

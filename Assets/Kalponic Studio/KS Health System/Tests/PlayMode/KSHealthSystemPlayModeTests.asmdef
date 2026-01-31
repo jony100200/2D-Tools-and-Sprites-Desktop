@@ -1,8 +1,7 @@
 {
     "name": "KalponicStudio.HealthSystem.Tests.PlayMode",
     "references": [
-        "KalponicStudio.HealthSystem",
-        "UnityEngine.TestRunner"
+        "KalponicStudio.HealthSystem"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

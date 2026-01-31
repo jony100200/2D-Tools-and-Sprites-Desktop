@@ -46,14 +46,28 @@ namespace KalponicStudio.Health
         // Public API - Simple and clean
         public void TakeDamage(int damage)
         {
-            if (_health is HealthSystem)
+            TakeDamage(DamageInfo.FromAmount(damage));
+
+            if (raiseHealthEvents)
             {
-                _health.TakeDamage(damage);
+                healthEvents?.RaiseDamageTaken(damage);
             }
-            else if (_shield != null && _shield.HasShield)
+        }
+
+        public void TakeDamage(DamageInfo damageInfo)
+        {
+            if (_health is HealthSystem healthSystem)
             {
-                int remainingDamage = damage - _shield.CurrentShield;
-                _shield.DamageShield(damage);
+                healthSystem.TakeDamage(damageInfo);
+                return;
+            }
+
+            if (damageInfo.Amount <= 0) return;
+
+            if (!damageInfo.BypassShield && _shield != null && _shield.HasShield)
+            {
+                int remainingDamage = damageInfo.Amount - _shield.CurrentShield;
+                _shield.DamageShield(damageInfo.Amount);
 
                 if (remainingDamage > 0 && _health != null)
                 {
@@ -62,12 +76,7 @@ namespace KalponicStudio.Health
             }
             else if (_health != null)
             {
-                _health.TakeDamage(damage);
-            }
-
-            if (raiseHealthEvents)
-            {
-                healthEvents?.RaiseDamageTaken(damage);
+                _health.TakeDamage(damageInfo.Amount);
             }
         }
 

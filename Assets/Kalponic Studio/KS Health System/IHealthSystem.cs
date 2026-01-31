@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace KalponicStudio.Health
 {
@@ -13,10 +14,14 @@ namespace KalponicStudio.Health
         int MaxHealth { get; }
         float HealthPercent { get; }
         bool IsAlive { get; }
+        bool IsDowned { get; }
+        bool IsDead { get; }
 
         void TakeDamage(int damage);
+        void TakeDamage(DamageInfo damageInfo);
         void Heal(int amount);
         void Kill();
+        void Revive(int healthAmount);
     }
 
     // Optional shield interface - only if needed
@@ -68,6 +73,7 @@ namespace KalponicStudio.Health
     public class StatusEffect
     {
         public string effectName;
+        public StatusEffectType effectType;
         public float duration;
         public float remainingTime;
         public bool isBuff; // true for buffs, false for debuffs
@@ -75,10 +81,14 @@ namespace KalponicStudio.Health
         public float tickInterval;
         public float tickTimer;
         public float speedMultiplier = 1f;
+        public StatusStackingMode stackingMode = StatusStackingMode.Refresh;
+        public int maxStacks = 1;
+        public int stackCount = 1;
 
         public StatusEffect(string name, float time, bool buff = false, int amountPerTick = 0, float tickInterval = 1f, float speedMultiplier = 1f)
         {
             effectName = name;
+            effectType = StatusEffectType.Custom;
             duration = time;
             remainingTime = time;
             isBuff = buff;
@@ -87,5 +97,75 @@ namespace KalponicStudio.Health
             this.speedMultiplier = speedMultiplier;
             tickTimer = 0f;
         }
+
+        public StatusEffect(StatusEffectType type, float time, bool buff = false, int amountPerTick = 0, float tickInterval = 1f, float speedMultiplier = 1f)
+        {
+            effectType = type;
+            effectName = type.ToString();
+            duration = time;
+            remainingTime = time;
+            isBuff = buff;
+            this.amountPerTick = amountPerTick;
+            this.tickInterval = tickInterval;
+            this.speedMultiplier = speedMultiplier;
+            tickTimer = 0f;
+        }
+    }
+
+    public enum DamageType
+    {
+        Generic,
+        Physical,
+        Fire,
+        Ice,
+        Poison,
+        Electric,
+        True
+    }
+
+    public enum StatusEffectType
+    {
+        Custom,
+        Poison,
+        Regeneration,
+        SpeedBoost
+    }
+
+    public enum StatusStackingMode
+    {
+        Refresh,
+        Extend,
+        Stack
+    }
+
+    [System.Serializable]
+    public struct DamageInfo
+    {
+        public int Amount;
+        public DamageType Type;
+        public bool BypassShield;
+        public bool IgnoreMitigation;
+        public object Source;
+        public string SourceTag;
+
+        public static DamageInfo FromAmount(int amount)
+        {
+            return new DamageInfo
+            {
+                Amount = amount,
+                Type = DamageType.Generic,
+                BypassShield = false,
+                IgnoreMitigation = false,
+                Source = null,
+                SourceTag = string.Empty
+            };
+        }
+    }
+
+    [System.Serializable]
+    public struct DamageResistance
+    {
+        public DamageType type;
+        [Range(0f, 2f)] public float multiplier;
     }
 }

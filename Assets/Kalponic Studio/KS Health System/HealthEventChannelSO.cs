@@ -16,6 +16,9 @@ namespace KalponicStudio.Health
         [SerializeField] private UnityEvent<int> onDamageTaken = new UnityEvent<int>();
         [SerializeField] private UnityEvent<int> onHealed = new UnityEvent<int>();
         [SerializeField] private UnityEvent onDeath = new UnityEvent();
+        [SerializeField] private UnityEvent onDowned = new UnityEvent();
+        [SerializeField] private UnityEvent onRevived = new UnityEvent();
+        [SerializeField] private UnityEvent onDownedExpired = new UnityEvent();
 
         // Optional shield events
         [SerializeField] private UnityEvent<int> onShieldAbsorbed = new UnityEvent<int>();
@@ -29,6 +32,9 @@ namespace KalponicStudio.Health
         public event Action<int> DamageTaken;
         public event Action<int> Healed;
         public event Action Death;
+        public event Action Downed;
+        public event Action Revived;
+        public event Action DownedExpired;
         public event Action<int> ShieldAbsorbed;
         public event Action ShieldDepleted;
         public event Action<string> EffectApplied;
@@ -51,6 +57,24 @@ namespace KalponicStudio.Health
         {
             Death?.Invoke();
             onDeath.Invoke();
+        }
+
+        public void RaiseDowned()
+        {
+            Downed?.Invoke();
+            onDowned.Invoke();
+        }
+
+        public void RaiseRevived()
+        {
+            Revived?.Invoke();
+            onRevived.Invoke();
+        }
+
+        public void RaiseDownedExpired()
+        {
+            DownedExpired?.Invoke();
+            onDownedExpired.Invoke();
         }
 
         public void RaiseHealthChanged(int currentHealth, int maxHealth)

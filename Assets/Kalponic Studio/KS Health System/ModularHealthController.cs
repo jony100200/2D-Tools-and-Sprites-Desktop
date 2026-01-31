@@ -155,6 +155,11 @@ namespace KalponicStudio.Health
             _healthSystem?.TakeDamage(damage);
         }
 
+        public void TakeDamage(DamageInfo damageInfo)
+        {
+            _healthSystem?.TakeDamage(damageInfo);
+        }
+
         public void Heal(int amount)
         {
             _healthSystem?.Heal(amount);

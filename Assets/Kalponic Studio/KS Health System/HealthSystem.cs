@@ -20,6 +20,14 @@ namespace KalponicStudio.Health
         [SerializeField] private bool regenerateHealth = false;
         [SerializeField] private float regenerationRate = 1f; // Health per second
         [SerializeField] private float regenerationDelay = 2f; // Delay before regeneration starts
+        [SerializeField] private float flatDamageReduction = 0f;
+        [SerializeField, Range(0f, 1f)] private float percentDamageReduction = 0f;
+        [SerializeField] private DamageResistance[] damageResistances = new DamageResistance[0];
+
+        [Header("Downed State")]
+        [SerializeField] private bool enableDownedState = false;
+        [SerializeField] private float downedDuration = 5f;
+        [SerializeField] private bool allowRevive = true;
 
         [Header("Invulnerability")]
         [SerializeField] private bool enableInvulnerability = true;
@@ -32,6 +40,9 @@ namespace KalponicStudio.Health
         [SerializeField] private UnityEvent<int> onDamageTaken = new UnityEvent<int>(); // damage amount
         [SerializeField] private UnityEvent<int> onHealed = new UnityEvent<int>(); // heal amount
         [SerializeField] private UnityEvent onDeath = new UnityEvent();
+        [SerializeField] private UnityEvent onDowned = new UnityEvent();
+        [SerializeField] private UnityEvent onRevived = new UnityEvent();
+        [SerializeField] private UnityEvent onDownedExpired = new UnityEvent();
         [SerializeField] private UnityEvent onInvulnerabilityStart = new UnityEvent();
         [SerializeField] private UnityEvent onInvulnerabilityEnd = new UnityEvent();
 
@@ -39,6 +50,9 @@ namespace KalponicStudio.Health
         public event Action<int> DamageTaken;
         public event Action<int> Healed;
         public event Action Death;
+        public event Action Downed;
+        public event Action Revived;
+        public event Action DownedExpired;
         public event Action InvulnerabilityStarted;
         public event Action InvulnerabilityEnded;
 
@@ -46,8 +60,10 @@ namespace KalponicStudio.Health
         public int MaxHealth => maxHealth;
         public int CurrentHealth => currentHealth;
         public float HealthPercent => maxHealth > 0 ? (float)currentHealth / maxHealth : 0f;
-        public bool IsAlive => currentHealth > 0;
+        public bool IsAlive => currentHealth > 0 && !isDead;
         public bool IsInvulnerable => invulnerabilityTimer > 0;
+        public bool IsDowned => isDowned;
+        public bool IsDead => isDead;
 
         // Private fields
         private float regenerationTimer = 0f;
@@ -56,6 +72,9 @@ namespace KalponicStudio.Health
         private SpriteRenderer spriteRenderer;
         private bool originalSpriteEnabled = true;
         private IShieldAbsorber shieldAbsorber;
+        private bool isDowned = false;
+        private bool isDead = false;
+        private float downedTimer = 0f;
 
         private void Awake()
         {
@@ -65,6 +84,8 @@ namespace KalponicStudio.Health
 
             // Ensure current health doesn't exceed max
             currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+            isDowned = false;
+            isDead = false;
 
             // Trigger initial health changed event
             RaiseHealthChanged();
@@ -74,6 +95,7 @@ namespace KalponicStudio.Health
         {
             HandleInvulnerability();
             HandleRegeneration();
+            HandleDownedState();
         }
 
         private void HandleInvulnerability()
@@ -105,7 +127,7 @@ namespace KalponicStudio.Health
 
         private void HandleRegeneration()
         {
-            if (!regenerateHealth || !IsAlive || IsInvulnerable) return;
+            if (!regenerateHealth || !IsAlive || IsInvulnerable || isDowned) return;
 
             // Check if enough time has passed since last damage
             if (Time.time - lastDamageTime < regenerationDelay) return;
@@ -123,23 +145,57 @@ namespace KalponicStudio.Health
             }
         }
 
+        private void HandleDownedState()
+        {
+            if (!isDowned) return;
+
+            if (downedTimer > 0f)
+            {
+                downedTimer -= Time.deltaTime;
+                if (downedTimer <= 0f)
+                {
+                    downedTimer = 0f;
+                    RaiseDownedExpired();
+                    Die();
+                }
+            }
+        }
+
         /// <summary>
         /// Take damage from any source
         /// </summary>
         public void TakeDamage(int damage)
         {
-            if (!IsAlive || (IsInvulnerable && damage > 0)) return;
-            if (damage <= 0) return;
+            TakeDamage(DamageInfo.FromAmount(damage));
+        }
 
-            int remainingDamage = damage;
+        public void TakeDamage(DamageInfo damageInfo)
+        {
+            if (isDead) return;
+            if (damageInfo.Amount <= 0) return;
+            if (IsInvulnerable && !damageInfo.IgnoreMitigation) return;
+            if (isDowned)
+            {
+                Die();
+                return;
+            }
+
+            int remainingDamage = damageInfo.Amount;
             if (shieldAbsorber == null)
             {
                 shieldAbsorber = GetComponent<IShieldAbsorber>();
             }
 
-            if (shieldAbsorber != null)
+            if (shieldAbsorber != null && !damageInfo.BypassShield && damageInfo.Type != DamageType.True)
             {
-                remainingDamage = shieldAbsorber.AbsorbDamage(damage);
+                remainingDamage = shieldAbsorber.AbsorbDamage(remainingDamage);
+            }
+
+            if (remainingDamage <= 0) return;
+
+            if (!damageInfo.IgnoreMitigation && damageInfo.Type != DamageType.True)
+            {
+                remainingDamage = ApplyMitigation(remainingDamage, damageInfo.Type);
             }
 
             if (remainingDamage <= 0) return;
@@ -160,7 +216,14 @@ namespace KalponicStudio.Health
             // Check for death
             if (currentHealth <= 0 && oldHealth > 0)
             {
-                RaiseDeath();
+                if (enableDownedState && allowRevive)
+                {
+                    EnterDownedState();
+                }
+                else
+                {
+                    Die();
+                }
             }
         }
 
@@ -169,13 +232,19 @@ namespace KalponicStudio.Health
         /// </summary>
         public void Heal(int healAmount)
         {
-            if (!IsAlive || healAmount <= 0) return;
+            if (isDead || healAmount <= 0) return;
 
             int oldHealth = currentHealth;
             currentHealth = Mathf.Min(maxHealth, currentHealth + healAmount);
 
             if (currentHealth != oldHealth)
             {
+                if (isDowned)
+                {
+                    Revive(currentHealth);
+                    return;
+                }
+
                 RaiseHealthChanged();
                 RaiseHealed(healAmount);
             }
@@ -191,12 +260,25 @@ namespace KalponicStudio.Health
 
             if (currentHealth != oldHealth)
             {
+                if (isDowned && currentHealth > 0)
+                {
+                    Revive(currentHealth);
+                    return;
+                }
+
                 RaiseHealthChanged();
 
                 // Check for death
                 if (currentHealth <= 0 && oldHealth > 0)
                 {
-                    RaiseDeath();
+                    if (enableDownedState && allowRevive)
+                    {
+                        EnterDownedState();
+                    }
+                    else
+                    {
+                        Die();
+                    }
                 }
             }
         }
@@ -206,6 +288,35 @@ namespace KalponicStudio.Health
             maxHealth = Mathf.Max(1, newMaxHealth);
             currentHealth = Mathf.Min(currentHealth, maxHealth);
             RaiseHealthChanged();
+        }
+
+        public void ConfigureRegeneration(bool enabled, float rate, float delay)
+        {
+            regenerateHealth = enabled;
+            regenerationRate = Mathf.Max(0f, rate);
+            regenerationDelay = Mathf.Max(0f, delay);
+        }
+
+        public void ConfigureMitigation(float flatReduction, float percentReduction, DamageResistance[] resistances)
+        {
+            flatDamageReduction = Mathf.Max(0f, flatReduction);
+            percentDamageReduction = Mathf.Clamp01(percentReduction);
+            damageResistances = resistances ?? new DamageResistance[0];
+        }
+
+        public void ConfigureDownedState(bool enabled, float duration, bool canRevive)
+        {
+            enableDownedState = enabled;
+            downedDuration = Mathf.Max(0.1f, duration);
+            allowRevive = canRevive;
+        }
+
+        public void ConfigureInvulnerability(bool enabled, float duration, bool flashDuring, float interval)
+        {
+            enableInvulnerability = enabled;
+            invulnerabilityDuration = Mathf.Max(0f, duration);
+            flashDuringInvulnerability = flashDuring;
+            flashInterval = Mathf.Max(0.01f, interval);
         }
 
         /// <summary>
@@ -221,7 +332,21 @@ namespace KalponicStudio.Health
         /// </summary>
         public void Kill()
         {
-            TakeDamage(currentHealth);
+            if (isDead) return;
+            currentHealth = 0;
+            RaiseHealthChanged();
+            Die();
+        }
+
+        public void Revive(int healthAmount)
+        {
+            if (!isDowned || !allowRevive) return;
+
+            isDowned = false;
+            downedTimer = 0f;
+            currentHealth = Mathf.Clamp(healthAmount, 1, maxHealth);
+            RaiseHealthChanged();
+            RaiseRevived();
         }
 
         public void StartInvulnerability()
@@ -255,7 +380,7 @@ namespace KalponicStudio.Health
         /// </summary>
         public bool CanTakeDamage()
         {
-            return IsAlive && !IsInvulnerable;
+            return IsAlive && !IsInvulnerable && !isDowned;
         }
 
         // Unity event helpers for easy inspector setup
@@ -302,6 +427,79 @@ namespace KalponicStudio.Health
             {
                 healthEvents.RaiseDeath();
             }
+        }
+
+        private void RaiseDowned()
+        {
+            Downed?.Invoke();
+            onDowned?.Invoke();
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseDowned();
+            }
+        }
+
+        private void RaiseRevived()
+        {
+            Revived?.Invoke();
+            onRevived?.Invoke();
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseRevived();
+            }
+        }
+
+        private void RaiseDownedExpired()
+        {
+            DownedExpired?.Invoke();
+            onDownedExpired?.Invoke();
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseDownedExpired();
+            }
+        }
+
+        private int ApplyMitigation(int damage, DamageType damageType)
+        {
+            float multiplier = GetResistanceMultiplier(damageType);
+            float mitigated = damage * multiplier;
+
+            mitigated -= flatDamageReduction;
+            mitigated *= 1f - percentDamageReduction;
+
+            return Mathf.Max(0, Mathf.RoundToInt(mitigated));
+        }
+
+        private float GetResistanceMultiplier(DamageType damageType)
+        {
+            if (damageResistances == null || damageResistances.Length == 0) return 1f;
+
+            for (int i = 0; i < damageResistances.Length; i++)
+            {
+                if (damageResistances[i].type == damageType)
+                {
+                    return Mathf.Clamp(damageResistances[i].multiplier, 0f, 2f);
+                }
+            }
+
+            return 1f;
+        }
+
+        private void EnterDownedState()
+        {
+            if (isDowned || isDead) return;
+            isDowned = true;
+            downedTimer = Mathf.Max(0.1f, downedDuration);
+            RaiseDowned();
+        }
+
+        private void Die()
+        {
+            if (isDead) return;
+            isDead = true;
+            isDowned = false;
+            downedTimer = 0f;
+            RaiseDeath();
         }
     }
 }

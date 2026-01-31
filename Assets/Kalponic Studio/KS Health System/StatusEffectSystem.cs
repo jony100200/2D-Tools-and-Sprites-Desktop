@@ -77,13 +77,21 @@ namespace KalponicStudio.Health
         {
             if (healthSystem == null) return;
 
-            if (effect.effectName == "Poison")
+            int tickAmount = Mathf.Max(0, effect.amountPerTick) * Mathf.Max(1, effect.stackCount);
+
+            if (effect.effectType == StatusEffectType.Poison || effect.effectName == "Poison")
             {
-                healthSystem.TakeDamage(effect.amountPerTick);
+                if (tickAmount > 0)
+                {
+                    healthSystem.TakeDamage(tickAmount);
+                }
             }
-            else if (effect.effectName == "Regeneration")
+            else if (effect.effectType == StatusEffectType.Regeneration || effect.effectName == "Regeneration")
             {
-                healthSystem.Heal(effect.amountPerTick);
+                if (tickAmount > 0)
+                {
+                    healthSystem.Heal(tickAmount);
+                }
             }
         }
 
@@ -92,21 +100,28 @@ namespace KalponicStudio.Health
         /// </summary>
         public void ApplyEffect(StatusEffect effect)
         {
-            // Remove existing effect of same name
-            RemoveEffect(effect.effectName);
+            int existingIndex = FindEffectIndex(effect);
+            if (existingIndex >= 0)
+            {
+                StatusEffect existing = activeEffects[existingIndex];
+                ApplyStacking(existing, effect);
+                activeEffects[existingIndex] = existing;
+                ApplyInstantEffect(existing, true);
+                RaiseEffectApplied(existing.effectName);
+                return;
+            }
 
-            // Add new effect
             activeEffects.Add(effect);
-
             ApplyInstantEffect(effect, true);
             RaiseEffectApplied(effect.effectName);
         }
 
         public void RemoveEffect(string effectName)
         {
+            string normalized = NormalizeEffectName(effectName);
             for (int i = activeEffects.Count - 1; i >= 0; i--)
             {
-                if (activeEffects[i].effectName == effectName)
+                if (NormalizeEffectName(activeEffects[i].effectName) == normalized)
                 {
                     ExpireEffect(activeEffects[i], i);
                     break;
@@ -127,20 +142,26 @@ namespace KalponicStudio.Health
         // Interface implementations
         public void ApplyPoison(float duration = 5f, int damagePerSecond = 3)
         {
-            StatusEffect poison = new StatusEffect("Poison", duration, false, Mathf.Max(1, damagePerSecond), 1f);
+            StatusEffect poison = new StatusEffect(StatusEffectType.Poison, duration, false, Mathf.Max(1, damagePerSecond), 1f);
+            poison.stackingMode = StatusStackingMode.Stack;
+            poison.maxStacks = 5;
             ApplyEffect(poison);
         }
 
         public void ApplyRegeneration(float duration = 8f, int healPerSecond = 4)
         {
-            StatusEffect regen = new StatusEffect("Regeneration", duration, true, Mathf.Max(1, healPerSecond), 1f);
+            StatusEffect regen = new StatusEffect(StatusEffectType.Regeneration, duration, true, Mathf.Max(1, healPerSecond), 1f);
+            regen.stackingMode = StatusStackingMode.Refresh;
+            regen.maxStacks = 1;
             ApplyEffect(regen);
         }
 
         public void ApplySpeedBoost(float duration = 10f, float multiplier = 1.5f)
         {
             float clampedMultiplier = Mathf.Max(0.1f, multiplier);
-            StatusEffect speedBoost = new StatusEffect("Speed Boost", duration, true, 0, 0f, clampedMultiplier);
+            StatusEffect speedBoost = new StatusEffect(StatusEffectType.SpeedBoost, duration, true, 0, 0f, clampedMultiplier);
+            speedBoost.stackingMode = StatusStackingMode.Refresh;
+            speedBoost.maxStacks = 1;
             ApplyEffect(speedBoost);
         }
 
@@ -153,17 +174,73 @@ namespace KalponicStudio.Health
 
         private void ApplyInstantEffect(StatusEffect effect, bool apply)
         {
-            if (effect.effectName == "Speed Boost" && speedModifier != null)
+            if ((effect.effectType == StatusEffectType.SpeedBoost || effect.effectName == "Speed Boost") && speedModifier != null)
             {
                 if (apply)
                 {
-                    speedModifier.ApplySpeedMultiplier(effect.speedMultiplier);
+                    speedModifier.ResetSpeedMultiplier();
+                    speedModifier.ApplySpeedMultiplier(GetEffectiveSpeedMultiplier(effect));
                 }
                 else
                 {
                     speedModifier.ResetSpeedMultiplier();
                 }
             }
+        }
+
+        private float GetEffectiveSpeedMultiplier(StatusEffect effect)
+        {
+            if (effect.stackingMode != StatusStackingMode.Stack || effect.stackCount <= 1)
+            {
+                return effect.speedMultiplier;
+            }
+
+            return Mathf.Pow(effect.speedMultiplier, effect.stackCount);
+        }
+
+        private int FindEffectIndex(StatusEffect effect)
+        {
+            string normalized = NormalizeEffectName(effect.effectName);
+            for (int i = 0; i < activeEffects.Count; i++)
+            {
+                if (NormalizeEffectName(activeEffects[i].effectName) == normalized)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private string NormalizeEffectName(string name)
+        {
+            return string.IsNullOrWhiteSpace(name) ? string.Empty : name.Replace(" ", string.Empty).ToLowerInvariant();
+        }
+
+        private void ApplyStacking(StatusEffect existing, StatusEffect incoming)
+        {
+            existing.stackingMode = incoming.stackingMode;
+            existing.maxStacks = Mathf.Max(1, incoming.maxStacks);
+
+            switch (incoming.stackingMode)
+            {
+                case StatusStackingMode.Refresh:
+                    existing.remainingTime = incoming.duration;
+                    existing.stackCount = 1;
+                    break;
+                case StatusStackingMode.Extend:
+                    existing.remainingTime += incoming.duration;
+                    existing.stackCount = 1;
+                    break;
+                case StatusStackingMode.Stack:
+                    existing.stackCount = Mathf.Min(existing.maxStacks, existing.stackCount + 1);
+                    existing.remainingTime = Mathf.Max(existing.remainingTime, incoming.duration);
+                    break;
+            }
+
+            existing.amountPerTick = incoming.amountPerTick;
+            existing.tickInterval = incoming.tickInterval;
+            existing.speedMultiplier = incoming.speedMultiplier;
         }
 
         private void RaiseEffectApplied(string effectName)
