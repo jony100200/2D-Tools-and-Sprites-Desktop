@@ -8,6 +8,20 @@ namespace KalponicStudio
 
     public class KSPrefabMakerWindow : EditorWindow
     {
+        private Vector2 scrollPos;
+        private const string PREF_PREFAB_INPUT = "KSPM_InputFolder";
+        private const string PREF_PREFAB_OUTPUT = "KSPM_OutputFolder";
+
+        private void OnEnable()
+        {
+            string inPath = EditorPrefs.GetString(PREF_PREFAB_INPUT, string.Empty);
+            if (!string.IsNullOrEmpty(inPath))
+                inputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(inPath);
+
+            string outPath = EditorPrefs.GetString(PREF_PREFAB_OUTPUT, string.Empty);
+            if (!string.IsNullOrEmpty(outPath))
+                outputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(outPath);
+        }
         [MenuItem("Tools/Kalponic Studio/KS Prefab Maker")]
         static void ShowWindow()
         {
@@ -26,8 +40,16 @@ namespace KalponicStudio
 
         void OnGUI()
         {
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
             inputFolder = (DefaultAsset)EditorGUILayout.ObjectField("Input Folder", inputFolder, typeof(DefaultAsset), false);
             outputFolder = (DefaultAsset)EditorGUILayout.ObjectField("Output Folder", outputFolder, typeof(DefaultAsset), false);
+            // persist fields when user changes them
+            if (GUI.changed)
+            {
+                EditorPrefs.SetString(PREF_PREFAB_INPUT, inputFolder != null ? AssetDatabase.GetAssetPath(inputFolder) : string.Empty);
+                EditorPrefs.SetString(PREF_PREFAB_OUTPUT, outputFolder != null ? AssetDatabase.GetAssetPath(outputFolder) : string.Empty);
+            }
             selectedType = (AssetType)EditorGUILayout.EnumPopup("Asset Type", selectedType);
             includeSubfolders = EditorGUILayout.Toggle("Include Subfolders", includeSubfolders);
             addColliders = EditorGUILayout.Toggle("Add Box Colliders", addColliders);
@@ -70,6 +92,8 @@ namespace KalponicStudio
                 WorkspaceManager.ClearRoot();
                 populated.Clear();
             }
+
+            EditorGUILayout.EndScrollView();
         }
     }
 }

@@ -11,6 +11,7 @@ namespace KalponicStudio.Editor
         private HitboxCollisionMatrix matrix;
         private SerializedObject serializedMatrix;
         private SerializedProperty rulesProp;
+        private Vector2 scrollPos;
 
         [MenuItem("Tools/Kalponic Studio/Animation/KS Animation 2D/Hitbox Collision Matrix")]
         public static void Open()
@@ -22,6 +23,7 @@ namespace KalponicStudio.Editor
 
         private void OnGUI()
         {
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
             EditorGUILayout.Space();
             matrix = (HitboxCollisionMatrix)EditorGUILayout.ObjectField("Matrix Asset", matrix, typeof(HitboxCollisionMatrix), false);
 
@@ -70,6 +72,8 @@ namespace KalponicStudio.Editor
             }
 
             serializedMatrix.ApplyModifiedProperties();
+
+            EditorGUILayout.EndScrollView();
         }
 
         private void SetRule(HitboxType src, HitboxType dst, bool allow)

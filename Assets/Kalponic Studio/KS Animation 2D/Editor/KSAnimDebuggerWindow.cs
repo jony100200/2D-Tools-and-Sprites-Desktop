@@ -9,6 +9,7 @@ namespace KalponicStudio
     public sealed class KSAnimDebuggerWindow : EditorWindow
     {
         private GameObject inspected;
+        private Vector2 scrollPos;
         private IAnimationDiagnostics diagnostics;
 
         [MenuItem("Tools/Kalponic Studio/Animation/KS Animation 2D/Live Debugger")]
@@ -41,9 +42,18 @@ namespace KalponicStudio
 
         private void OnGUI()
         {
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
+            inspected = (GameObject)EditorGUILayout.ObjectField("Inspected GameObject (optional)", inspected, typeof(GameObject), true);
+            if (inspected == null)
+            {
+                inspected = Selection.activeGameObject;
+            }
+
             if (diagnostics == null)
             {
                 EditorGUILayout.HelpBox("Select a GameObject with an IAnimationDiagnostics implementer (AnimatorAnimationPlayer, PlayableAnimatorComponent, etc.).", MessageType.Info);
+                EditorGUILayout.EndScrollView();
                 return;
             }
 
@@ -77,6 +87,8 @@ namespace KalponicStudio
                     EditorGUILayout.LabelField("- " + entry);
                 }
             }
+
+            EditorGUILayout.EndScrollView();
         }
     }
 }

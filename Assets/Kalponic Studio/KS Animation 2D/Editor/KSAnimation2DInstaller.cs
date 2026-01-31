@@ -13,6 +13,7 @@ namespace KalponicStudio.Editor
     /// </summary>
     public class KSAnimation2DInstaller : EditorWindow
     {
+        private Vector2 scrollPos;
         [MenuItem("Tools/Kalponic Studio/Animation/KS Animation 2D/Install System", false, 0)]
         static void ShowInstaller()
         {
@@ -35,6 +36,8 @@ namespace KalponicStudio.Editor
 
         private void OnGUI()
         {
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
             GUILayout.Label("KS Animation 2D - Modular 2D Animation System", EditorStyles.boldLabel);
             GUILayout.Label("Version 2.0.0 - Code-first animation that solves Unity Animator Controller shortfalls");
             GUILayout.Space(20);
@@ -82,6 +85,8 @@ namespace KalponicStudio.Editor
             {
                 GUILayout.Label("❌ System not found - run Quick Install", new GUIStyle(EditorStyles.label) { normal = { textColor = Color.red } });
             }
+
+            EditorGUILayout.EndScrollView();
         }
 
         private static void QuickInstall()

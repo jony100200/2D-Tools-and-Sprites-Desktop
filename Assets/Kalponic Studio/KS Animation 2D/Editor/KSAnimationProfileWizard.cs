@@ -15,6 +15,10 @@ namespace KalponicStudio.Editor
     {
         private AnimatorController controller;
         private string outputFolder = "Assets/_Project/ScriptableObjects/AnimationProfiles/Generated";
+        private DefaultAsset outputFolderAsset;
+        private const string PREF_PROFILE_WIZARD_OUTPUT = "KSAP_ProfileWizard_Output";
+        private Vector2 scrollPos;
+        private Vector2 scrollPos;
         private string profileSetName = "GeneratedProfileSet";
         private float defaultFade = 0.1f;
 
@@ -28,9 +32,18 @@ namespace KalponicStudio.Editor
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Generate Animation Profiles from Animator", EditorStyles.boldLabel);
-            controller = (AnimatorController)EditorGUILayout.ObjectField("Animator Controller", controller, typeof(AnimatorController), false);
-            outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
+                scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
+                EditorGUILayout.LabelField("Generate Animation Profiles from Animator", EditorStyles.boldLabel);
+                controller = (AnimatorController)EditorGUILayout.ObjectField("Animator Controller", controller, typeof(AnimatorController), false);
+
+                outputFolderAsset = (DefaultAsset)EditorGUILayout.ObjectField("Output Folder (drag folder)", outputFolderAsset, typeof(DefaultAsset), false);
+                if (outputFolderAsset != null)
+                {
+                    outputFolder = AssetDatabase.GetAssetPath(outputFolderAsset);
+                    EditorPrefs.SetString(PREF_PROFILE_WIZARD_OUTPUT, outputFolder);
+                }
+                outputFolder = EditorGUILayout.TextField("Output Folder (path)", outputFolder);
             profileSetName = EditorGUILayout.TextField("Profile Set Name", profileSetName);
             defaultFade = EditorGUILayout.FloatField("Default Fade", defaultFade);
 
@@ -41,6 +54,17 @@ namespace KalponicStudio.Editor
                 {
                     Generate();
                 }
+            }
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void OnEnable()
+        {
+            string pref = EditorPrefs.GetString(PREF_PROFILE_WIZARD_OUTPUT, string.Empty);
+            if (!string.IsNullOrEmpty(pref))
+            {
+                outputFolder = pref;
+                outputFolderAsset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(pref);
             }
         }
 

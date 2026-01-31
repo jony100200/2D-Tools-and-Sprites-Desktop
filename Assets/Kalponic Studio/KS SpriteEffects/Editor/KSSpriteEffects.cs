@@ -4,6 +4,7 @@ using KalponicStudio.SpriteEffects;
 
 public class KSSpriteEffects : EditorWindow
 {
+    private Vector2 scrollPos;
     private const string InputFolderPrefKey = "KSSpriteEffects_InputFolder";
     private const string OutputFolderPrefKey = "KSSpriteEffects_OutputFolder";
     private const string MaterialPrefKey = "KSSpriteEffects_Material";
@@ -62,6 +63,8 @@ public class KSSpriteEffects : EditorWindow
 
     private void OnGUI()
     {
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
         GUILayout.Label("KS Sprite Effects", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("Applies the selected material to sprites without stacking.", MessageType.Info);
 
@@ -90,6 +93,8 @@ public class KSSpriteEffects : EditorWindow
                 ProcessTextures();
             }
         }
+
+        EditorGUILayout.EndScrollView();
     }
 
     private bool CanProcess()

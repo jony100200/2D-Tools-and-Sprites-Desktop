@@ -16,15 +16,42 @@ public class RemoveRootMotion : EditorWindow
     private AnimationClip[] animationClips; // Array to store selected animation clips
     private DefaultAsset sourceFolder;
     private string saveFolder = "Assets/NoRMClips"; // Default folder path to save duplicated clips
+    private Vector2 scrollPos;
+    private DefaultAsset saveFolderAsset;
+
+    private const string PREF_RM_SOURCE = "KSAR_RemoveRoot_SourceFolder";
+    private const string PREF_RM_SAVE = "KSAR_RemoveRoot_SaveFolder";
+
+    private void OnEnable()
+    {
+        string src = EditorPrefs.GetString(PREF_RM_SOURCE, string.Empty);
+        if (!string.IsNullOrEmpty(src))
+            sourceFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(src);
+
+        string save = EditorPrefs.GetString(PREF_RM_SAVE, string.Empty);
+        if (!string.IsNullOrEmpty(save))
+        {
+            saveFolder = save;
+            saveFolderAsset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(save);
+        }
+    }
 
     private void OnGUI()
     {
+        // Title label
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
         // Title label
         GUILayout.Label("Select Source Folder or Animation Clips/FBX Files", EditorStyles.boldLabel);
 
         // Source folder field
         GUILayout.Label("Source Folder", EditorStyles.boldLabel);
-        sourceFolder = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips and FBX files from it."), sourceFolder, typeof(DefaultAsset), false);
+        var newSource = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips and FBX files from it."), sourceFolder, typeof(DefaultAsset), false);
+        if (newSource != sourceFolder)
+        {
+            sourceFolder = newSource;
+            EditorPrefs.SetString(PREF_RM_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
+        }
 
         if (GUILayout.Button(new GUIContent("Load from Source Folder", "Load all animation clips and clips from FBX files in the selected folder.")))
         {
@@ -43,7 +70,16 @@ public class RemoveRootMotion : EditorWindow
 
             // Folder path label and text field
             GUILayout.Label("Save Duplicated Clips To", EditorStyles.boldLabel);
+            var newSave = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Folder (drag folder)", "Drag a folder here to save duplicated clips."), saveFolderAsset, typeof(DefaultAsset), false);
+            if (newSave != saveFolderAsset)
+            {
+                saveFolderAsset = newSave;
+                saveFolder = saveFolderAsset != null ? AssetDatabase.GetAssetPath(saveFolderAsset) : saveFolder;
+                EditorPrefs.SetString(PREF_RM_SAVE, saveFolder);
+            }
+
             saveFolder = EditorGUILayout.TextField(new GUIContent("Folder Path", "Specify the folder path where the duplicated clips will be saved."), saveFolder);
+            EditorPrefs.SetString(PREF_RM_SAVE, saveFolder);
 
             // Button to duplicate clips and remove Root motion
             if (GUILayout.Button(new GUIContent("Remove Root Motion from Animation Clips", "Duplicate the selected clips and remove the root motion from the duplicated clips.")))
@@ -60,6 +96,8 @@ public class RemoveRootMotion : EditorWindow
                 GUILayout.Label(clip.name);
             }
         }
+
+        EditorGUILayout.EndScrollView();
     }
 
     private void LoadSelectedAnimationClips()
@@ -158,6 +196,8 @@ public class RemoveRootMotion : EditorWindow
             RemoveRootTZFromClip(newClip);
         }
         Debug.Log("Duplicated and removed Root T.z from all selected animation clips.");
+        EditorPrefs.SetString(PREF_RM_SAVE, saveFolder);
+        EditorPrefs.SetString(PREF_RM_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
     }
 
     // Remove the Root T.z curve from the given animation clip

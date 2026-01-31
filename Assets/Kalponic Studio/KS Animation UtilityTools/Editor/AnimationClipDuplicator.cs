@@ -15,14 +15,42 @@ public class AnimationClipDuplicator : EditorWindow
     private AnimationClip[] animationClips;
     private DefaultAsset sourceFolder;
     private string duplicateFolder = "Assets/DuplicatedClips";
+    private Vector2 scrollPos;
+    private DefaultAsset duplicateFolderAsset;
+
+    private const string PREF_SOURCE_FOLDER = "KSAD_Duplicator_SourceFolder";
+    private const string PREF_DUPLICATE_FOLDER = "KSAD_Duplicator_DuplicateFolder";
+
+    private void OnEnable()
+    {
+        // Load saved folder paths
+        string src = EditorPrefs.GetString(PREF_SOURCE_FOLDER, string.Empty);
+        if (!string.IsNullOrEmpty(src))
+            sourceFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(src);
+
+        string dst = EditorPrefs.GetString(PREF_DUPLICATE_FOLDER, string.Empty);
+        if (!string.IsNullOrEmpty(dst))
+        {
+            duplicateFolder = dst;
+            duplicateFolderAsset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(dst);
+        }
+    }
 
     private void OnGUI()
     {
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
         GUILayout.Label("Select Source Folder or Animation Clips/FBX Files", EditorStyles.boldLabel);
 
         // Source folder field
         GUILayout.Label("Source Folder", EditorStyles.boldLabel);
-        sourceFolder = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips and FBX files from it."), sourceFolder, typeof(DefaultAsset), false);
+        var newSource = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips and FBX files from it."), sourceFolder, typeof(DefaultAsset), false);
+        if (newSource != sourceFolder)
+        {
+            sourceFolder = newSource;
+            string path = sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty;
+            EditorPrefs.SetString(PREF_SOURCE_FOLDER, path);
+        }
 
         if (GUILayout.Button(new GUIContent("Load from Source Folder", "Load all animation clips and clips from FBX files in the selected folder.")))
         {
@@ -38,7 +66,16 @@ public class AnimationClipDuplicator : EditorWindow
         {
             GUILayout.Space(10);
             GUILayout.Label("Save Duplicated Clips To", EditorStyles.boldLabel);
+            var newDupAsset = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Duplicate Folder (drag folder)", "Drag a folder here to save duplicated clips."), duplicateFolderAsset, typeof(DefaultAsset), false);
+            if (newDupAsset != duplicateFolderAsset)
+            {
+                duplicateFolderAsset = newDupAsset;
+                duplicateFolder = duplicateFolderAsset != null ? AssetDatabase.GetAssetPath(duplicateFolderAsset) : duplicateFolder;
+                EditorPrefs.SetString(PREF_DUPLICATE_FOLDER, duplicateFolder);
+            }
+
             duplicateFolder = EditorGUILayout.TextField(new GUIContent("Duplicate Folder Path", "Specify the folder path where the duplicated clips will be saved."), duplicateFolder);
+            EditorPrefs.SetString(PREF_DUPLICATE_FOLDER, duplicateFolder);
 
             if (GUILayout.Button(new GUIContent("Duplicate Animation Clips", "Duplicate the selected animation clips and save them in organized subfolders.")))
             {
@@ -52,6 +89,8 @@ public class AnimationClipDuplicator : EditorWindow
                 GUILayout.Label(clip.name);
             }
         }
+
+        EditorGUILayout.EndScrollView();
     }
 
     private void LoadSelectedAnimationClips()
@@ -159,5 +198,8 @@ public class AnimationClipDuplicator : EditorWindow
         }
         AssetDatabase.SaveAssets();
         Debug.Log("Duplicated all selected animation clips.");
+        // persist chosen folders
+        EditorPrefs.SetString(PREF_DUPLICATE_FOLDER, duplicateFolder);
+        EditorPrefs.SetString(PREF_SOURCE_FOLDER, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
     }
 }

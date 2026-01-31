@@ -14,14 +14,30 @@ public class AnimationClipRenamer : EditorWindow
     private AnimationClip[] animationClips;
     private DefaultAsset sourceFolder;
     private string suffixToRemove = "_Duplicate_NoRootTz";
+    private Vector2 scrollPos;
+    private const string PREF_RENAMER_SOURCE = "KSAR_Renamer_SourceFolder";
+
+    private void OnEnable()
+    {
+        string src = EditorPrefs.GetString(PREF_RENAMER_SOURCE, string.Empty);
+        if (!string.IsNullOrEmpty(src))
+            sourceFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(src);
+    }
 
     private void OnGUI()
     {
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
         GUILayout.Label("Select Source Folder or Animation Clips to Rename", EditorStyles.boldLabel);
 
         // Source folder field
         GUILayout.Label("Source Folder", EditorStyles.boldLabel);
-        sourceFolder = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips from it."), sourceFolder, typeof(DefaultAsset), false);
+        var newSource = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder here to load all animation clips from it."), sourceFolder, typeof(DefaultAsset), false);
+        if (newSource != sourceFolder)
+        {
+            sourceFolder = newSource;
+            EditorPrefs.SetString(PREF_RENAMER_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
+        }
 
         if (GUILayout.Button(new GUIContent("Load from Source Folder", "Load all animation clips from the selected folder.")))
         {
@@ -52,6 +68,8 @@ public class AnimationClipRenamer : EditorWindow
                 GUILayout.Label(clip.name + " -> " + proposedName);
             }
         }
+
+        EditorGUILayout.EndScrollView();
     }
 
     private void LoadSelectedAnimationClips()
@@ -120,5 +138,7 @@ public class AnimationClipRenamer : EditorWindow
         }
         AssetDatabase.Refresh();
         Debug.Log("Renamed all loaded animation clips.");
+        // persist source folder
+        EditorPrefs.SetString(PREF_RENAMER_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
     }
 }

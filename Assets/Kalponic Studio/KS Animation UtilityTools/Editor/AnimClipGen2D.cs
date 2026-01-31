@@ -17,18 +17,48 @@ public class AnimClipGen2D : EditorWindow
     private string outputFolder = "Assets/GeneratedAnimations";
     private float frameRate = 12f;
     private bool loop = true;
+    private Vector2 scrollPos;
+    private const string PREF_GEN2D_SOURCE = "KSAG_Gen2D_SourceFolder";
+    private const string PREF_GEN2D_OUTPUT = "KSAG_Gen2D_OutputFolder";
+
+    private void OnEnable()
+    {
+        string src = EditorPrefs.GetString(PREF_GEN2D_SOURCE, string.Empty);
+        if (!string.IsNullOrEmpty(src))
+            sourceFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(src);
+
+        string outp = EditorPrefs.GetString(PREF_GEN2D_OUTPUT, string.Empty);
+        if (!string.IsNullOrEmpty(outp))
+        {
+            outputFolder = outp;
+            outputFolderAsset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(outp);
+        }
+    }
 
     private void OnGUI()
     {
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
         GUILayout.Label("Anim Clip Gen 2D", EditorStyles.boldLabel);
 
         // Source folder field
         GUILayout.Label("Source Folder", EditorStyles.boldLabel);
-        sourceFolder = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder containing sprite sheets to generate animation clips from."), sourceFolder, typeof(DefaultAsset), false);
+        var newSource = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Source Folder", "Drag a folder containing sprite sheets to generate animation clips from."), sourceFolder, typeof(DefaultAsset), false);
+        if (newSource != sourceFolder)
+        {
+            sourceFolder = newSource;
+            EditorPrefs.SetString(PREF_GEN2D_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
+        }
 
         // Output folder field
         GUILayout.Label("Output Folder", EditorStyles.boldLabel);
-        outputFolderAsset = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Output Folder", "Drag a folder to save generated animation clips."), outputFolderAsset, typeof(DefaultAsset), false);
+        var newOutput = (DefaultAsset)EditorGUILayout.ObjectField(new GUIContent("Output Folder", "Drag a folder to save generated animation clips."), outputFolderAsset, typeof(DefaultAsset), false);
+        if (newOutput != outputFolderAsset)
+        {
+            outputFolderAsset = newOutput;
+            outputFolder = outputFolderAsset != null ? AssetDatabase.GetAssetPath(outputFolderAsset) : outputFolder;
+            EditorPrefs.SetString(PREF_GEN2D_OUTPUT, outputFolder);
+        }
 
         // Frame rate
         GUILayout.Label("Frame Rate", EditorStyles.boldLabel);
@@ -41,6 +71,8 @@ public class AnimClipGen2D : EditorWindow
         {
             GenerateClips();
         }
+
+        EditorGUILayout.EndScrollView();
     }
 
     private void GenerateClips()
@@ -134,5 +166,8 @@ public class AnimClipGen2D : EditorWindow
         }
         AssetDatabase.SaveAssets();
         Debug.Log("Generated all animation clips.");
+        // persist folders
+        EditorPrefs.SetString(PREF_GEN2D_SOURCE, sourceFolder != null ? AssetDatabase.GetAssetPath(sourceFolder) : string.Empty);
+        EditorPrefs.SetString(PREF_GEN2D_OUTPUT, outputFolder);
     }
 }
