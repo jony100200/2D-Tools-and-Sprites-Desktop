@@ -47,14 +47,27 @@ Profiles
 
 1) Add `HealthSystem` to your player/enemy.
 2) (Optional) Add `ShieldSystem`, `StatusEffectSystem`, `HealthVisualSystem`.
-3) (Optional) Add `HealthUIController` and UI components from `UI/`.
+3) (Optional) Add `HealthUIController` and UI components from `Runtime/UI/`.
 4) (Optional) Create a `HealthProfileSO` and apply it at runtime or in a setup script.
 
 That is enough to be fully functional.
 
 ---
 
-## 3) Step-by-step setup (scene)
+## 3) Folder structure (audit)
+
+Current structure is modular and easy to extend:
+
+- `Runtime/Core` - health, shields, status effects, profiles, controllers
+- `Runtime/Visuals` - visual feedback system
+- `Runtime/UI` - UI components and UI docs
+- `Extensions` - optional advanced features (safe to ignore)
+- `Resources` - ScriptableObject assets (optional)
+- `Tests` - playmode tests
+
+---
+
+## 4) Step-by-step setup (scene)
 
 ### Beginner Scene Setup (Hierarchy)
 1) Create a Player GameObject
@@ -120,7 +133,7 @@ That is enough to be fully functional.
 
 ---
 
-## 4) Code usage (common patterns)
+## 5) Code usage (common patterns)
 
 ### A) Subscribe to events (recommended)
 ```csharp
@@ -202,7 +215,7 @@ public class HealthProfileApplier : MonoBehaviour
 
 ---
 
-## 5) UI setup (step-by-step)
+## 6) UI setup (step-by-step)
 
 ### Health bar + text + icon
 1) Create a Canvas.
@@ -219,7 +232,7 @@ Tips:
 
 ---
 
-## 6) Recommended setup by game type
+## 7) Recommended setup by game type
 
 Shmup (Sky Force style)
 - HealthSystem + ShieldSystem + HealthVisualSystem
@@ -243,7 +256,7 @@ Action RPG
 
 ---
 
-## 7) How to use events
+## 8) How to use events
 
 Code (C# events)
 - HealthSystem: `HealthChanged`, `DamageTaken`, `Healed`, `Death`, `Downed`, `Revived`
@@ -258,7 +271,7 @@ Event Channel (optional)
 
 ---
 
-## 8) Damage types and mitigation
+## 9) Damage types and mitigation
 
 - `DamageType` includes Generic, Physical, Fire, Ice, Poison, Electric, True.
 - Flat and percent mitigation are applied unless damage is True or IgnoreMitigation is set.
@@ -266,7 +279,7 @@ Event Channel (optional)
 
 ---
 
-## 9) Status effects and stacking
+## 10) Status effects and stacking
 
 Each effect supports:
 - Duration and tick interval
@@ -281,7 +294,7 @@ Default behavior:
 
 ---
 
-## 10) Downed / Revive
+## 11) Downed / Revive
 
 Optional flow:
 - On lethal damage: enter Downed state instead of Death
@@ -290,7 +303,7 @@ Optional flow:
 
 ---
 
-## 11) Health Profiles
+## 12) Health Profiles
 
 `HealthProfileSO` can configure:
 - Health settings
@@ -303,7 +316,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 12) Common issues
+## 13) Common issues
 
 - If no events fire, check if you subscribed to C# events or assigned UnityEvents.
 - If a shield exists but damage hits health, ensure `ShieldSystem` is on the same object.
@@ -311,7 +324,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 13) Notes on modularity
+## 14) Notes on modularity
 
 You can use any subset:
 - Health only
@@ -324,7 +337,7 @@ This is designed to remain clear, simple, and easy to debug.
 
 ---
 
-## 14) Separation of Function vs Visuals (recommended)
+## 15) Separation of Function vs Visuals (recommended)
 
 Keep gameplay logic separate from visuals:
 - Core logic: `HealthSystem`, `ShieldSystem`, `StatusEffectSystem`
