@@ -11,6 +11,7 @@ namespace KalponicStudio.Health
     public class HealthEventChannelSO : ScriptableObject
     {
         // Core health events - simplified
+        public UnityEvent<int, int> onHealthChanged = new UnityEvent<int, int>();
         public UnityEvent<int> onDamageTaken = new UnityEvent<int>();
         public UnityEvent<int> onHealed = new UnityEvent<int>();
         public UnityEvent onDeath = new UnityEvent();
@@ -27,6 +28,7 @@ namespace KalponicStudio.Health
         public void RaiseDamageTaken(int damage) => onDamageTaken.Invoke(damage);
         public void RaiseHealed(int amount) => onHealed.Invoke(amount);
         public void RaiseDeath() => onDeath.Invoke();
+        public void RaiseHealthChanged(int currentHealth, int maxHealth) => onHealthChanged.Invoke(currentHealth, maxHealth);
         public void RaiseShieldAbsorbed(int damage) => onShieldAbsorbed.Invoke(damage);
         public void RaiseShieldDepleted() => onShieldDepleted.Invoke();
         public void RaiseEffectApplied(string effectName) => onEffectApplied.Invoke(effectName);

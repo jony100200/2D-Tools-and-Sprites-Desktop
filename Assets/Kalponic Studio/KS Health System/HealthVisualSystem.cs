@@ -12,6 +12,9 @@ namespace KalponicStudio.Health
     [RequireComponent(typeof(HealthSystem))]
     public class HealthVisualSystem : MonoBehaviour, IHealthEventHandler
     {
+        [Header("Event Channels")]
+        [SerializeField] private HealthEventChannelSO healthEvents;
+
         [Header("Screen Effects")]
         [SerializeField] private Image damageFlashImage;
         [SerializeField] private Color damageFlashColor = new Color(1f, 0f, 0f, 0.3f);
@@ -57,6 +60,7 @@ namespace KalponicStudio.Health
         private HealthSystem healthSystem;
         private Color originalSpriteColor;
         private bool isLowHealth = false;
+        private bool isAlive = true;
 
         private void Awake()
         {
@@ -66,15 +70,6 @@ namespace KalponicStudio.Health
             if (mainRenderer != null)
             {
                 originalSpriteColor = mainRenderer.color;
-            }
-
-            // Subscribe to health events via event channel
-            var eventChannel = GetComponentInChildren<HealthEventChannelSO>();
-            if (eventChannel != null)
-            {
-                eventChannel.onDamageTaken.AddListener(OnDamageTaken);
-                eventChannel.onHealed.AddListener(OnHealed);
-                eventChannel.onDeath.AddListener(OnDeath);
             }
 
             // Setup screen overlays
@@ -92,6 +87,21 @@ namespace KalponicStudio.Health
             {
                 lowHealthOverlay.gameObject.SetActive(false);
             }
+
+            if (healthSystem != null)
+            {
+                OnHealthChanged(healthSystem.CurrentHealth, healthSystem.MaxHealth);
+            }
+        }
+
+        private void OnEnable()
+        {
+            SubscribeToEvents();
+        }
+
+        private void OnDisable()
+        {
+            UnsubscribeFromEvents();
         }
 
         private void Update()
@@ -184,13 +194,16 @@ namespace KalponicStudio.Health
             {
                 lowHealthOverlay.gameObject.SetActive(false);
             }
+
+            isLowHealth = false;
+            isAlive = false;
         }
 
         private void UpdateLowHealthEffect()
         {
             if (lowHealthOverlay == null) return;
 
-            if (isLowHealth && healthSystem.IsAlive)
+            if (isLowHealth && isAlive)
             {
                 lowHealthOverlay.gameObject.SetActive(true);
 
@@ -255,6 +268,59 @@ namespace KalponicStudio.Health
         public void SetLowHealthThreshold(float threshold)
         {
             lowHealthThreshold = Mathf.Clamp01(threshold);
+        }
+
+        private void OnHealthChanged(int currentHealth, int maxHealth)
+        {
+            isAlive = currentHealth > 0;
+            if (maxHealth <= 0)
+            {
+                isLowHealth = false;
+                return;
+            }
+
+            float percent = (float)currentHealth / maxHealth;
+            isLowHealth = percent <= lowHealthThreshold;
+        }
+
+        private void SubscribeToEvents()
+        {
+            if (healthEvents != null)
+            {
+                healthEvents.onDamageTaken.AddListener(OnDamageTaken);
+                healthEvents.onHealed.AddListener(OnHealed);
+                healthEvents.onDeath.AddListener(OnDeath);
+                healthEvents.onHealthChanged.AddListener(OnHealthChanged);
+                return;
+            }
+
+            if (healthSystem != null)
+            {
+                healthSystem.onDamageTaken.AddListener(OnDamageTaken);
+                healthSystem.onHealed.AddListener(OnHealed);
+                healthSystem.onDeath.AddListener(OnDeath);
+                healthSystem.onHealthChanged.AddListener(OnHealthChanged);
+            }
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            if (healthEvents != null)
+            {
+                healthEvents.onDamageTaken.RemoveListener(OnDamageTaken);
+                healthEvents.onHealed.RemoveListener(OnHealed);
+                healthEvents.onDeath.RemoveListener(OnDeath);
+                healthEvents.onHealthChanged.RemoveListener(OnHealthChanged);
+                return;
+            }
+
+            if (healthSystem != null)
+            {
+                healthSystem.onDamageTaken.RemoveListener(OnDamageTaken);
+                healthSystem.onHealed.RemoveListener(OnHealed);
+                healthSystem.onDeath.RemoveListener(OnDeath);
+                healthSystem.onHealthChanged.RemoveListener(OnHealthChanged);
+            }
         }
     }
 

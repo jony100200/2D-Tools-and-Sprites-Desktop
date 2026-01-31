@@ -25,10 +25,12 @@ namespace KalponicStudio.Health
 
         // Component references
         private HealthSystem healthSystem;
+        private ISpeedModifier speedModifier;
 
         private void Awake()
         {
             healthSystem = GetComponent<HealthSystem>();
+            speedModifier = GetComponent<ISpeedModifier>();
         }
 
         private void Update()
@@ -50,29 +52,34 @@ namespace KalponicStudio.Health
                 // Remove expired effects
                 if (effect.remainingTime <= 0)
                 {
-                    RemoveEffect(effect.effectName);
+                    ExpireEffect(effect, i);
                 }
             }
         }
 
         private void ApplyContinuousEffect(StatusEffect effect)
         {
-            // Simple implementation - just handle poison and regeneration
+            if (effect.tickInterval <= 0f) return;
+
+            effect.tickTimer += Time.deltaTime;
+            while (effect.tickTimer >= effect.tickInterval)
+            {
+                effect.tickTimer -= effect.tickInterval;
+                ApplyTick(effect);
+            }
+        }
+
+        private void ApplyTick(StatusEffect effect)
+        {
+            if (healthSystem == null) return;
+
             if (effect.effectName == "Poison")
             {
-                // Apply damage over time (simplified - damage every second)
-                if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
-                {
-                    healthSystem.TakeDamage(3);
-                }
+                healthSystem.TakeDamage(effect.amountPerTick);
             }
             else if (effect.effectName == "Regeneration")
             {
-                // Apply healing over time (simplified - heal every second)
-                if (Time.frameCount % 60 == 0) // Every ~1 second at 60fps
-                {
-                    healthSystem.Heal(4);
-                }
+                healthSystem.Heal(effect.amountPerTick);
             }
         }
 
@@ -87,14 +94,8 @@ namespace KalponicStudio.Health
             // Add new effect
             activeEffects.Add(effect);
 
-            if (healthEvents != null)
-            {
-                healthEvents.RaiseEffectApplied(effect.effectName);
-            }
-            else
-            {
-                onEffectApplied?.Invoke(effect.effectName);
-            }
+            ApplyInstantEffect(effect, true);
+            RaiseEffectApplied(effect.effectName);
         }
 
         public void RemoveEffect(string effectName)
@@ -103,15 +104,7 @@ namespace KalponicStudio.Health
             {
                 if (activeEffects[i].effectName == effectName)
                 {
-                    activeEffects.RemoveAt(i);
-                    if (healthEvents != null)
-                    {
-                        healthEvents.RaiseEffectExpired(effectName);
-                    }
-                    else
-                    {
-                        onEffectExpired?.Invoke(effectName);
-                    }
+                    ExpireEffect(activeEffects[i], i);
                     break;
                 }
             }
@@ -121,14 +114,8 @@ namespace KalponicStudio.Health
         {
             foreach (var effect in activeEffects)
             {
-                if (healthEvents != null)
-                {
-                    healthEvents.RaiseEffectExpired(effect.effectName);
-                }
-                else
-                {
-                    onEffectExpired?.Invoke(effect.effectName);
-                }
+                ApplyInstantEffect(effect, false);
+                RaiseEffectExpired(effect.effectName);
             }
             activeEffects.Clear();
         }
@@ -136,20 +123,61 @@ namespace KalponicStudio.Health
         // Interface implementations
         public void ApplyPoison(float duration = 5f, int damagePerSecond = 3)
         {
-            StatusEffect poison = new StatusEffect("Poison", duration, false);
+            StatusEffect poison = new StatusEffect("Poison", duration, false, Mathf.Max(1, damagePerSecond), 1f);
             ApplyEffect(poison);
         }
 
         public void ApplyRegeneration(float duration = 8f, int healPerSecond = 4)
         {
-            StatusEffect regen = new StatusEffect("Regeneration", duration, true);
+            StatusEffect regen = new StatusEffect("Regeneration", duration, true, Mathf.Max(1, healPerSecond), 1f);
             ApplyEffect(regen);
         }
 
         public void ApplySpeedBoost(float duration = 10f, float multiplier = 1.5f)
         {
-            StatusEffect speedBoost = new StatusEffect("Speed Boost", duration, true);
+            float clampedMultiplier = Mathf.Max(0.1f, multiplier);
+            StatusEffect speedBoost = new StatusEffect("Speed Boost", duration, true, 0, 0f, clampedMultiplier);
             ApplyEffect(speedBoost);
+        }
+
+        private void ExpireEffect(StatusEffect effect, int index)
+        {
+            ApplyInstantEffect(effect, false);
+            activeEffects.RemoveAt(index);
+            RaiseEffectExpired(effect.effectName);
+        }
+
+        private void ApplyInstantEffect(StatusEffect effect, bool apply)
+        {
+            if (effect.effectName == "Speed Boost" && speedModifier != null)
+            {
+                if (apply)
+                {
+                    speedModifier.ApplySpeedMultiplier(effect.speedMultiplier);
+                }
+                else
+                {
+                    speedModifier.ResetSpeedMultiplier();
+                }
+            }
+        }
+
+        private void RaiseEffectApplied(string effectName)
+        {
+            onEffectApplied?.Invoke(effectName);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseEffectApplied(effectName);
+            }
+        }
+
+        private void RaiseEffectExpired(string effectName)
+        {
+            onEffectExpired?.Invoke(effectName);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseEffectExpired(effectName);
+            }
         }
     }
 }

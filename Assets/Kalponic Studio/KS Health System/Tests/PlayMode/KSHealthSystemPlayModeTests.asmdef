@@ -1,0 +1,22 @@
+{
+    "name": "KalponicStudio.HealthSystem.Tests.PlayMode",
+    "references": [
+        "KalponicStudio.HealthSystem",
+        "UnityEngine.TestRunner"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "testAssemblies": true,
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -20,6 +20,9 @@ namespace KalponicStudio.Health
         private IHealthComponent _health;
         private IShieldComponent _shield;
         private IStatusEffectComponent _effects;
+        private bool raiseHealthEvents = true;
+        private bool raiseShieldEvents = true;
+        private bool raiseEffectEvents = true;
 
         private void Awake()
         {
@@ -27,6 +30,9 @@ namespace KalponicStudio.Health
             _health = healthSystem as IHealthComponent;
             _shield = shieldSystem as IShieldComponent;
             _effects = statusEffectSystem as IStatusEffectComponent;
+            raiseHealthEvents = !(healthSystem is HealthSystem);
+            raiseShieldEvents = !(shieldSystem is ShieldSystem);
+            raiseEffectEvents = !(statusEffectSystem is StatusEffectSystem);
 
             // Basic validation
             if (healthSystem != null && _health == null)
@@ -40,8 +46,11 @@ namespace KalponicStudio.Health
         // Public API - Simple and clean
         public void TakeDamage(int damage)
         {
-            // Try shield first, then health
-            if (_shield != null && _shield.HasShield)
+            if (_health is HealthSystem)
+            {
+                _health.TakeDamage(damage);
+            }
+            else if (_shield != null && _shield.HasShield)
             {
                 int remainingDamage = damage - _shield.CurrentShield;
                 _shield.DamageShield(damage);
@@ -56,27 +65,38 @@ namespace KalponicStudio.Health
                 _health.TakeDamage(damage);
             }
 
-            // Raise event
-            healthEvents?.RaiseDamageTaken(damage);
+            if (raiseHealthEvents)
+            {
+                healthEvents?.RaiseDamageTaken(damage);
+            }
         }
 
         public void Heal(int amount)
         {
             _health?.Heal(amount);
-            healthEvents?.RaiseHealed(amount);
+            if (raiseHealthEvents)
+            {
+                healthEvents?.RaiseHealed(amount);
+            }
         }
 
         public void Kill()
         {
             _health?.Kill();
-            healthEvents?.RaiseDeath();
+            if (raiseHealthEvents)
+            {
+                healthEvents?.RaiseDeath();
+            }
         }
 
         // Shield methods
         public void DamageShield(int damage)
         {
             _shield?.DamageShield(damage);
-            healthEvents?.RaiseShieldAbsorbed(damage);
+            if (raiseShieldEvents)
+            {
+                healthEvents?.RaiseShieldAbsorbed(damage);
+            }
         }
 
         public void RestoreShield(int amount)
@@ -88,19 +108,28 @@ namespace KalponicStudio.Health
         public void ApplyPoison(float duration = 5f, int damagePerSecond = 3)
         {
             _effects?.ApplyPoison(duration, damagePerSecond);
-            healthEvents?.RaiseEffectApplied("Poison");
+            if (raiseEffectEvents)
+            {
+                healthEvents?.RaiseEffectApplied("Poison");
+            }
         }
 
         public void ApplyRegeneration(float duration = 8f, int healPerSecond = 4)
         {
             _effects?.ApplyRegeneration(duration, healPerSecond);
-            healthEvents?.RaiseEffectApplied("Regeneration");
+            if (raiseEffectEvents)
+            {
+                healthEvents?.RaiseEffectApplied("Regeneration");
+            }
         }
 
         public void ApplySpeedBoost(float duration = 10f, float multiplier = 1.5f)
         {
             _effects?.ApplySpeedBoost(duration, multiplier);
-            healthEvents?.RaiseEffectApplied("Speed Boost");
+            if (raiseEffectEvents)
+            {
+                healthEvents?.RaiseEffectApplied("Speed Boost");
+            }
         }
 
         // Properties - delegate to systems

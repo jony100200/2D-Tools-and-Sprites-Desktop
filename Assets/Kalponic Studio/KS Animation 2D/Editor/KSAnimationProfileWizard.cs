@@ -18,7 +18,6 @@ namespace KalponicStudio.Editor
         private DefaultAsset outputFolderAsset;
         private const string PREF_PROFILE_WIZARD_OUTPUT = "KSAP_ProfileWizard_Output";
         private Vector2 scrollPos;
-        private Vector2 scrollPos;
         private string profileSetName = "GeneratedProfileSet";
         private float defaultFade = 0.1f;
 

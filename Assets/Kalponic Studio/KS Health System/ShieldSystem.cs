@@ -11,7 +11,7 @@ namespace KalponicStudio.Health
     /// Now uses event channels for better decoupling
     /// </summary>
     [RequireComponent(typeof(HealthSystem))]
-    public class ShieldSystem : MonoBehaviour, IShieldComponent
+    public class ShieldSystem : MonoBehaviour, IShieldComponent, IShieldAbsorber
     {
         [Header("Event Channels")]
         [SerializeField] private HealthEventChannelSO healthEvents;
@@ -39,17 +39,12 @@ namespace KalponicStudio.Health
         public bool HasShield => currentShield > 0;
 
         // Private fields
-        private HealthSystem healthSystem;
         private float regenerationTimer = 0f;
         private bool shieldActive = true;
 
         private void Awake()
         {
-            healthSystem = GetComponent<HealthSystem>();
             currentShield = Mathf.Clamp(currentShield, 0, maxShield);
-
-            // Subscribe to health system damage events
-            healthSystem.onDamageTaken.AddListener(OnHealthDamageTaken);
 
             // Setup shield visual
             if (shieldRenderer == null)
@@ -92,53 +87,11 @@ namespace KalponicStudio.Health
         }
 
         /// <summary>
-        /// Called when health system takes damage - shield absorbs first
+        /// Absorb incoming damage and return remaining damage (if any)
         /// </summary>
-        private void OnHealthDamageTaken(int damage)
+        public int AbsorbDamage(int damage)
         {
-            if (!shieldActive || currentShield <= 0) return;
-
-            int damageAbsorbed = Mathf.Min(damage, currentShield);
-            int damagePassedThrough = damage - damageAbsorbed;
-
-            // Reduce shield
-            int oldShield = currentShield;
-            currentShield = Mathf.Max(0, currentShield - damageAbsorbed);
-
-            // Notify listeners
-            onShieldChanged?.Invoke(currentShield, maxShield);
-            if (healthEvents != null)
-            {
-                healthEvents.RaiseShieldAbsorbed(damageAbsorbed);
-            }
-            else
-            {
-                onShieldAbsorbed?.Invoke(damageAbsorbed);
-            }
-
-            // Handle shield depletion
-            if (currentShield <= 0 && oldShield > 0)
-            {
-                if (healthEvents != null)
-                {
-                    healthEvents.RaiseShieldDepleted();
-                }
-                else
-                {
-                    onShieldDepleted?.Invoke();
-                }
-                regenerationTimer = regenerationDelay; // Start regeneration delay
-            }
-
-            UpdateShieldVisual();
-
-            // If there's damage that passed through, we need to handle it
-            // This would require modifying HealthSystem to allow damage interception
-            if (damagePassedThrough > 0)
-            {
-                Debug.LogWarning($"Shield absorbed {damageAbsorbed} damage, but {damagePassedThrough} passed through to health!");
-                // In a full implementation, you'd need HealthSystem to support damage modification
-            }
+            return ApplyShieldDamage(damage);
         }
 
         /// <summary>
@@ -146,35 +99,7 @@ namespace KalponicStudio.Health
         /// </summary>
         public void DamageShield(int damage)
         {
-            if (!shieldActive || damage <= 0) return;
-
-            int oldShield = currentShield;
-            currentShield = Mathf.Max(0, currentShield - damage);
-
-            if (healthEvents != null)
-            {
-                healthEvents.RaiseShieldAbsorbed(damage);
-            }
-            else
-            {
-                onShieldChanged?.Invoke(currentShield, maxShield);
-                onShieldAbsorbed?.Invoke(damage);
-            }
-
-            if (currentShield <= 0 && oldShield > 0)
-            {
-                if (healthEvents != null)
-                {
-                    healthEvents.RaiseShieldDepleted();
-                }
-                else
-                {
-                    onShieldDepleted?.Invoke();
-                }
-                regenerationTimer = regenerationDelay;
-            }
-
-            UpdateShieldVisual();
+            ApplyShieldDamage(damage);
         }
 
         /// <summary>
@@ -218,13 +143,10 @@ namespace KalponicStudio.Health
                 }
                 else if (currentShield <= 0 && oldShield > 0)
                 {
+                    onShieldDepleted?.Invoke();
                     if (healthEvents != null)
                     {
                         healthEvents.RaiseShieldDepleted();
-                    }
-                    else
-                    {
-                        onShieldDepleted?.Invoke();
                     }
                 }
             }
@@ -282,5 +204,36 @@ namespace KalponicStudio.Health
         public void RestoreShieldFromInt(int amount) => RestoreShield(amount);
         public void SetShieldFromInt(int shield) => SetShield(shield);
         public void SetMaxShieldFromInt(int maxShield) => SetMaxShield(maxShield);
+
+        private int ApplyShieldDamage(int damage)
+        {
+            if (!shieldActive || damage <= 0 || currentShield <= 0) return damage;
+
+            int damageAbsorbed = Mathf.Min(damage, currentShield);
+            int remainingDamage = damage - damageAbsorbed;
+            int oldShield = currentShield;
+            currentShield = Mathf.Max(0, currentShield - damageAbsorbed);
+
+            onShieldChanged?.Invoke(currentShield, maxShield);
+            onShieldAbsorbed?.Invoke(damageAbsorbed);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseShieldAbsorbed(damageAbsorbed);
+            }
+
+            regenerationTimer = regenerationDelay;
+
+            if (currentShield <= 0 && oldShield > 0)
+            {
+                onShieldDepleted?.Invoke();
+                if (healthEvents != null)
+                {
+                    healthEvents.RaiseShieldDepleted();
+                }
+            }
+
+            UpdateShieldVisual();
+            return remainingDamage;
+        }
     }
 }

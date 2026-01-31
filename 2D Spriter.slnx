@@ -14,6 +14,7 @@
   <Project Path="MK.Toon.VariantsManager.csproj" />
   <Project Path="MK.MeshUtility.csproj" />
   <Project Path="MK.Toon.URP.Editor.csproj" />
+  <Project Path="KalponicStudio.HealthSystem.Tests.PlayMode.csproj" />
   <Project Path="MK.MKTextureChannelPacker.csproj" />
   <Project Path="MK.Toon.URP.csproj" />
 </Solution>

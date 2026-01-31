@@ -25,6 +25,10 @@ namespace KalponicStudio.Health
         private IShieldComponent _shieldSystem;
         private IStatusEffectComponent _statusEffectSystem;
 
+        private HealthSystem _healthSystemBehaviour;
+        private ShieldSystem _shieldSystemBehaviour;
+        private StatusEffectSystem _statusEffectSystemBehaviour;
+
         private List<IHealthEventHandler> _healthEventHandlers = new List<IHealthEventHandler>();
 
         private void Awake()
@@ -45,6 +49,10 @@ namespace KalponicStudio.Health
             _healthSystem = healthSystem as IHealthComponent;
             _shieldSystem = shieldSystem as IShieldComponent;
             _statusEffectSystem = statusEffectSystem as IStatusEffectComponent;
+
+            _healthSystemBehaviour = healthSystem as HealthSystem;
+            _shieldSystemBehaviour = shieldSystem as ShieldSystem;
+            _statusEffectSystemBehaviour = statusEffectSystem as StatusEffectSystem;
 
             // Validate systems
             if (healthSystem != null && _healthSystem == null)
@@ -69,34 +77,76 @@ namespace KalponicStudio.Health
 
         private void SubscribeToEvents()
         {
-            if (healthEvents == null) return;
+            if (healthEvents != null)
+            {
+                // Subscribe to event channel
+                healthEvents.onDamageTaken.AddListener(OnDamageTaken);
+                healthEvents.onHealed.AddListener(OnHealed);
+                healthEvents.onDeath.AddListener(OnDeath);
 
-            // Subscribe to event channel
-            healthEvents.onDamageTaken.AddListener(OnDamageTaken);
-            healthEvents.onHealed.AddListener(OnHealed);
-            healthEvents.onDeath.AddListener(OnDeath);
+                healthEvents.onShieldAbsorbed.AddListener(OnShieldAbsorbed);
+                healthEvents.onShieldDepleted.AddListener(OnShieldDepleted);
 
-            healthEvents.onShieldAbsorbed.AddListener(OnShieldAbsorbed);
-            healthEvents.onShieldDepleted.AddListener(OnShieldDepleted);
+                healthEvents.onEffectApplied.AddListener(OnEffectApplied);
+                healthEvents.onEffectExpired.AddListener(OnEffectExpired);
+                return;
+            }
 
-            healthEvents.onEffectApplied.AddListener(OnEffectApplied);
-            healthEvents.onEffectExpired.AddListener(OnEffectExpired);
+            if (_healthSystemBehaviour != null)
+            {
+                _healthSystemBehaviour.onDamageTaken.AddListener(OnDamageTaken);
+                _healthSystemBehaviour.onHealed.AddListener(OnHealed);
+                _healthSystemBehaviour.onDeath.AddListener(OnDeath);
+            }
+
+            if (_shieldSystemBehaviour != null)
+            {
+                _shieldSystemBehaviour.onShieldAbsorbed.AddListener(OnShieldAbsorbed);
+                _shieldSystemBehaviour.onShieldDepleted.AddListener(OnShieldDepleted);
+            }
+
+            if (_statusEffectSystemBehaviour != null)
+            {
+                _statusEffectSystemBehaviour.onEffectApplied.AddListener(OnEffectApplied);
+                _statusEffectSystemBehaviour.onEffectExpired.AddListener(OnEffectExpired);
+            }
         }
 
         private void UnsubscribeFromEvents()
         {
-            if (healthEvents == null) return;
+            if (healthEvents != null)
+            {
+                // Unsubscribe from event channel
+                healthEvents.onDamageTaken.RemoveListener(OnDamageTaken);
+                healthEvents.onHealed.RemoveListener(OnHealed);
+                healthEvents.onDeath.RemoveListener(OnDeath);
 
-            // Unsubscribe from event channel
-            healthEvents.onDamageTaken.RemoveListener(OnDamageTaken);
-            healthEvents.onHealed.RemoveListener(OnHealed);
-            healthEvents.onDeath.RemoveListener(OnDeath);
+                healthEvents.onShieldAbsorbed.RemoveListener(OnShieldAbsorbed);
+                healthEvents.onShieldDepleted.RemoveListener(OnShieldDepleted);
 
-            healthEvents.onShieldAbsorbed.RemoveListener(OnShieldAbsorbed);
-            healthEvents.onShieldDepleted.RemoveListener(OnShieldDepleted);
+                healthEvents.onEffectApplied.RemoveListener(OnEffectApplied);
+                healthEvents.onEffectExpired.RemoveListener(OnEffectExpired);
+                return;
+            }
 
-            healthEvents.onEffectApplied.RemoveListener(OnEffectApplied);
-            healthEvents.onEffectExpired.RemoveListener(OnEffectExpired);
+            if (_healthSystemBehaviour != null)
+            {
+                _healthSystemBehaviour.onDamageTaken.RemoveListener(OnDamageTaken);
+                _healthSystemBehaviour.onHealed.RemoveListener(OnHealed);
+                _healthSystemBehaviour.onDeath.RemoveListener(OnDeath);
+            }
+
+            if (_shieldSystemBehaviour != null)
+            {
+                _shieldSystemBehaviour.onShieldAbsorbed.RemoveListener(OnShieldAbsorbed);
+                _shieldSystemBehaviour.onShieldDepleted.RemoveListener(OnShieldDepleted);
+            }
+
+            if (_statusEffectSystemBehaviour != null)
+            {
+                _statusEffectSystemBehaviour.onEffectApplied.RemoveListener(OnEffectApplied);
+                _statusEffectSystemBehaviour.onEffectExpired.RemoveListener(OnEffectExpired);
+            }
         }
 
         // Public API - Delegate to systems through interfaces

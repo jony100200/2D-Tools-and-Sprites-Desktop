@@ -48,17 +48,19 @@ namespace KalponicStudio.Health
         private float lastDamageTime = 0f;
         private SpriteRenderer spriteRenderer;
         private bool originalSpriteEnabled = true;
+        private IShieldAbsorber shieldAbsorber;
 
         private void Awake()
         {
             // Cache components
             spriteRenderer = GetComponent<SpriteRenderer>();
+            shieldAbsorber = GetComponent<IShieldAbsorber>();
 
             // Ensure current health doesn't exceed max
             currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
             // Trigger initial health changed event
-            onHealthChanged?.Invoke(currentHealth, maxHealth);
+            RaiseHealthChanged();
         }
 
         private void Update()
@@ -109,7 +111,7 @@ namespace KalponicStudio.Health
 
                 if (currentHealth != oldHealth)
                 {
-                    onHealthChanged?.Invoke(currentHealth, maxHealth);
+                    RaiseHealthChanged();
                 }
             }
         }
@@ -120,28 +122,38 @@ namespace KalponicStudio.Health
         public void TakeDamage(int damage)
         {
             if (!IsAlive || (IsInvulnerable && damage > 0)) return;
+            if (damage <= 0) return;
+
+            int remainingDamage = damage;
+            if (shieldAbsorber == null)
+            {
+                shieldAbsorber = GetComponent<IShieldAbsorber>();
+            }
+
+            if (shieldAbsorber != null)
+            {
+                remainingDamage = shieldAbsorber.AbsorbDamage(damage);
+            }
+
+            if (remainingDamage <= 0) return;
 
             int oldHealth = currentHealth;
-            currentHealth = Mathf.Max(0, currentHealth - damage);
+            currentHealth = Mathf.Max(0, currentHealth - remainingDamage);
+            lastDamageTime = Time.time;
 
             // Trigger events
-            onHealthChanged?.Invoke(currentHealth, maxHealth);
-            if (damage > 0)
+            RaiseHealthChanged();
+            RaiseDamageTaken(remainingDamage);
+
+            if (enableInvulnerability)
             {
-                if (healthEvents != null)
-                {
-                    healthEvents.RaiseDamageTaken(damage);
-                }
-                else
-                {
-                    onDamageTaken?.Invoke(damage);
-                }
+                StartInvulnerability();
             }
 
             // Check for death
             if (currentHealth <= 0 && oldHealth > 0)
             {
-                onDeath?.Invoke();
+                RaiseDeath();
             }
         }
 
@@ -157,15 +169,8 @@ namespace KalponicStudio.Health
 
             if (currentHealth != oldHealth)
             {
-                onHealthChanged?.Invoke(currentHealth, maxHealth);
-                if (healthEvents != null)
-                {
-                    healthEvents.RaiseHealed(healAmount);
-                }
-                else
-                {
-                    onHealed?.Invoke(healAmount);
-                }
+                RaiseHealthChanged();
+                RaiseHealed(healAmount);
             }
         }
 
@@ -179,19 +184,12 @@ namespace KalponicStudio.Health
 
             if (currentHealth != oldHealth)
             {
-                onHealthChanged?.Invoke(currentHealth, maxHealth);
+                RaiseHealthChanged();
 
                 // Check for death
                 if (currentHealth <= 0 && oldHealth > 0)
                 {
-                    if (healthEvents != null)
-                    {
-                        healthEvents.RaiseDeath();
-                    }
-                    else
-                    {
-                        onDeath?.Invoke();
-                    }
+                    RaiseDeath();
                 }
             }
         }
@@ -200,7 +198,7 @@ namespace KalponicStudio.Health
         {
             maxHealth = Mathf.Max(1, newMaxHealth);
             currentHealth = Mathf.Min(currentHealth, maxHealth);
-            onHealthChanged?.Invoke(currentHealth, maxHealth);
+            RaiseHealthChanged();
         }
 
         /// <summary>
@@ -256,5 +254,41 @@ namespace KalponicStudio.Health
         public void HealFromInt(int healAmount) => Heal(healAmount);
         public void SetHealthFromInt(int health) => SetHealth(health);
         public void SetMaxHealthFromInt(int maxHealth) => SetMaxHealth(maxHealth);
+
+        private void RaiseHealthChanged()
+        {
+            onHealthChanged?.Invoke(currentHealth, maxHealth);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseHealthChanged(currentHealth, maxHealth);
+            }
+        }
+
+        private void RaiseDamageTaken(int damage)
+        {
+            onDamageTaken?.Invoke(damage);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseDamageTaken(damage);
+            }
+        }
+
+        private void RaiseHealed(int amount)
+        {
+            onHealed?.Invoke(amount);
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseHealed(amount);
+            }
+        }
+
+        private void RaiseDeath()
+        {
+            onDeath?.Invoke();
+            if (healthEvents != null)
+            {
+                healthEvents.RaiseDeath();
+            }
+        }
     }
 }
