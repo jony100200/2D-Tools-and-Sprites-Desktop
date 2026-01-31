@@ -287,19 +287,19 @@ namespace KalponicStudio.Health
         {
             if (healthEvents != null)
             {
-                healthEvents.onDamageTaken.AddListener(OnDamageTaken);
-                healthEvents.onHealed.AddListener(OnHealed);
-                healthEvents.onDeath.AddListener(OnDeath);
-                healthEvents.onHealthChanged.AddListener(OnHealthChanged);
+                healthEvents.DamageTaken += OnDamageTaken;
+                healthEvents.Healed += OnHealed;
+                healthEvents.Death += OnDeath;
+                healthEvents.HealthChanged += OnHealthChanged;
                 return;
             }
 
             if (healthSystem != null)
             {
-                healthSystem.onDamageTaken.AddListener(OnDamageTaken);
-                healthSystem.onHealed.AddListener(OnHealed);
-                healthSystem.onDeath.AddListener(OnDeath);
-                healthSystem.onHealthChanged.AddListener(OnHealthChanged);
+                healthSystem.DamageTaken += OnDamageTaken;
+                healthSystem.Healed += OnHealed;
+                healthSystem.Death += OnDeath;
+                healthSystem.HealthChanged += OnHealthChanged;
             }
         }
 
@@ -307,19 +307,19 @@ namespace KalponicStudio.Health
         {
             if (healthEvents != null)
             {
-                healthEvents.onDamageTaken.RemoveListener(OnDamageTaken);
-                healthEvents.onHealed.RemoveListener(OnHealed);
-                healthEvents.onDeath.RemoveListener(OnDeath);
-                healthEvents.onHealthChanged.RemoveListener(OnHealthChanged);
+                healthEvents.DamageTaken -= OnDamageTaken;
+                healthEvents.Healed -= OnHealed;
+                healthEvents.Death -= OnDeath;
+                healthEvents.HealthChanged -= OnHealthChanged;
                 return;
             }
 
             if (healthSystem != null)
             {
-                healthSystem.onDamageTaken.RemoveListener(OnDamageTaken);
-                healthSystem.onHealed.RemoveListener(OnHealed);
-                healthSystem.onDeath.RemoveListener(OnDeath);
-                healthSystem.onHealthChanged.RemoveListener(OnHealthChanged);
+                healthSystem.DamageTaken -= OnDamageTaken;
+                healthSystem.Healed -= OnHealed;
+                healthSystem.Death -= OnDeath;
+                healthSystem.HealthChanged -= OnHealthChanged;
             }
         }
     }

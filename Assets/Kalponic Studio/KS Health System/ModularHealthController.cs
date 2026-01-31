@@ -80,35 +80,35 @@ namespace KalponicStudio.Health
             if (healthEvents != null)
             {
                 // Subscribe to event channel
-                healthEvents.onDamageTaken.AddListener(OnDamageTaken);
-                healthEvents.onHealed.AddListener(OnHealed);
-                healthEvents.onDeath.AddListener(OnDeath);
+                healthEvents.DamageTaken += OnDamageTaken;
+                healthEvents.Healed += OnHealed;
+                healthEvents.Death += OnDeath;
 
-                healthEvents.onShieldAbsorbed.AddListener(OnShieldAbsorbed);
-                healthEvents.onShieldDepleted.AddListener(OnShieldDepleted);
+                healthEvents.ShieldAbsorbed += OnShieldAbsorbed;
+                healthEvents.ShieldDepleted += OnShieldDepleted;
 
-                healthEvents.onEffectApplied.AddListener(OnEffectApplied);
-                healthEvents.onEffectExpired.AddListener(OnEffectExpired);
+                healthEvents.EffectApplied += OnEffectApplied;
+                healthEvents.EffectExpired += OnEffectExpired;
                 return;
             }
 
             if (_healthSystemBehaviour != null)
             {
-                _healthSystemBehaviour.onDamageTaken.AddListener(OnDamageTaken);
-                _healthSystemBehaviour.onHealed.AddListener(OnHealed);
-                _healthSystemBehaviour.onDeath.AddListener(OnDeath);
+                _healthSystemBehaviour.DamageTaken += OnDamageTaken;
+                _healthSystemBehaviour.Healed += OnHealed;
+                _healthSystemBehaviour.Death += OnDeath;
             }
 
             if (_shieldSystemBehaviour != null)
             {
-                _shieldSystemBehaviour.onShieldAbsorbed.AddListener(OnShieldAbsorbed);
-                _shieldSystemBehaviour.onShieldDepleted.AddListener(OnShieldDepleted);
+                _shieldSystemBehaviour.ShieldAbsorbed += OnShieldAbsorbed;
+                _shieldSystemBehaviour.ShieldDepleted += OnShieldDepleted;
             }
 
             if (_statusEffectSystemBehaviour != null)
             {
-                _statusEffectSystemBehaviour.onEffectApplied.AddListener(OnEffectApplied);
-                _statusEffectSystemBehaviour.onEffectExpired.AddListener(OnEffectExpired);
+                _statusEffectSystemBehaviour.EffectApplied += OnEffectApplied;
+                _statusEffectSystemBehaviour.EffectExpired += OnEffectExpired;
             }
         }
 
@@ -117,35 +117,35 @@ namespace KalponicStudio.Health
             if (healthEvents != null)
             {
                 // Unsubscribe from event channel
-                healthEvents.onDamageTaken.RemoveListener(OnDamageTaken);
-                healthEvents.onHealed.RemoveListener(OnHealed);
-                healthEvents.onDeath.RemoveListener(OnDeath);
+                healthEvents.DamageTaken -= OnDamageTaken;
+                healthEvents.Healed -= OnHealed;
+                healthEvents.Death -= OnDeath;
 
-                healthEvents.onShieldAbsorbed.RemoveListener(OnShieldAbsorbed);
-                healthEvents.onShieldDepleted.RemoveListener(OnShieldDepleted);
+                healthEvents.ShieldAbsorbed -= OnShieldAbsorbed;
+                healthEvents.ShieldDepleted -= OnShieldDepleted;
 
-                healthEvents.onEffectApplied.RemoveListener(OnEffectApplied);
-                healthEvents.onEffectExpired.RemoveListener(OnEffectExpired);
+                healthEvents.EffectApplied -= OnEffectApplied;
+                healthEvents.EffectExpired -= OnEffectExpired;
                 return;
             }
 
             if (_healthSystemBehaviour != null)
             {
-                _healthSystemBehaviour.onDamageTaken.RemoveListener(OnDamageTaken);
-                _healthSystemBehaviour.onHealed.RemoveListener(OnHealed);
-                _healthSystemBehaviour.onDeath.RemoveListener(OnDeath);
+                _healthSystemBehaviour.DamageTaken -= OnDamageTaken;
+                _healthSystemBehaviour.Healed -= OnHealed;
+                _healthSystemBehaviour.Death -= OnDeath;
             }
 
             if (_shieldSystemBehaviour != null)
             {
-                _shieldSystemBehaviour.onShieldAbsorbed.RemoveListener(OnShieldAbsorbed);
-                _shieldSystemBehaviour.onShieldDepleted.RemoveListener(OnShieldDepleted);
+                _shieldSystemBehaviour.ShieldAbsorbed -= OnShieldAbsorbed;
+                _shieldSystemBehaviour.ShieldDepleted -= OnShieldDepleted;
             }
 
             if (_statusEffectSystemBehaviour != null)
             {
-                _statusEffectSystemBehaviour.onEffectApplied.RemoveListener(OnEffectApplied);
-                _statusEffectSystemBehaviour.onEffectExpired.RemoveListener(OnEffectExpired);
+                _statusEffectSystemBehaviour.EffectApplied -= OnEffectApplied;
+                _statusEffectSystemBehaviour.EffectExpired -= OnEffectExpired;
             }
         }
 

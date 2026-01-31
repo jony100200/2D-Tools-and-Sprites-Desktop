@@ -34,7 +34,7 @@ namespace KalponicStudio.Health.UI
         {
             if (healthSystem != null)
             {
-                healthSystem.onHealthChanged.AddListener(OnHealthChanged);
+                healthSystem.HealthChanged += OnHealthChanged;
             }
         }
 
@@ -42,7 +42,7 @@ namespace KalponicStudio.Health.UI
         {
             if (healthSystem != null)
             {
-                healthSystem.onHealthChanged.RemoveListener(OnHealthChanged);
+                healthSystem.HealthChanged -= OnHealthChanged;
             }
         }
 
@@ -96,7 +96,7 @@ namespace KalponicStudio.Health.UI
             // Unsubscribe from old system
             if (healthSystem != null)
             {
-                healthSystem.onHealthChanged.RemoveListener(OnHealthChanged);
+                healthSystem.HealthChanged -= OnHealthChanged;
             }
 
             healthSystem = newHealthSystem;
@@ -104,7 +104,7 @@ namespace KalponicStudio.Health.UI
             // Subscribe to new system
             if (healthSystem != null)
             {
-                healthSystem.onHealthChanged.AddListener(OnHealthChanged);
+                healthSystem.HealthChanged += OnHealthChanged;
                 UpdateAllUI();
             }
         }

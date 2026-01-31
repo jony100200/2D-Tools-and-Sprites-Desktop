@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
@@ -28,10 +29,15 @@ namespace KalponicStudio.Health
         [SerializeField] private Color shieldDepletedColor = Color.gray;
 
         [Header("Events")]
-        public UnityEvent<int, int> onShieldChanged = new UnityEvent<int, int>(); // (currentShield, maxShield)
-        public UnityEvent<int> onShieldAbsorbed = new UnityEvent<int>(); // damage absorbed
-        public UnityEvent onShieldDepleted = new UnityEvent();
-        public UnityEvent onShieldRestored = new UnityEvent();
+        [SerializeField] private UnityEvent<int, int> onShieldChanged = new UnityEvent<int, int>(); // (currentShield, maxShield)
+        [SerializeField] private UnityEvent<int> onShieldAbsorbed = new UnityEvent<int>(); // damage absorbed
+        [SerializeField] private UnityEvent onShieldDepleted = new UnityEvent();
+        [SerializeField] private UnityEvent onShieldRestored = new UnityEvent();
+
+        public event Action<int, int> ShieldChanged;
+        public event Action<int> ShieldAbsorbed;
+        public event Action ShieldDepleted;
+        public event Action ShieldRestored;
 
         // Public properties
         public int MaxShield => maxShield;
@@ -53,7 +59,7 @@ namespace KalponicStudio.Health
             }
 
             UpdateShieldVisual();
-            onShieldChanged?.Invoke(currentShield, maxShield);
+            RaiseShieldChanged(currentShield, maxShield);
         }
 
         private void Update()
@@ -80,7 +86,7 @@ namespace KalponicStudio.Health
 
                 if (currentShield != oldShield)
                 {
-                    onShieldChanged?.Invoke(currentShield, maxShield);
+                    RaiseShieldChanged(currentShield, maxShield);
                     UpdateShieldVisual();
                 }
             }
@@ -114,12 +120,12 @@ namespace KalponicStudio.Health
 
             if (currentShield != oldShield)
             {
-                onShieldChanged?.Invoke(currentShield, maxShield);
+                RaiseShieldChanged(currentShield, maxShield);
                 UpdateShieldVisual();
 
                 if (oldShield <= 0 && currentShield > 0)
                 {
-                    onShieldRestored?.Invoke();
+                    RaiseShieldRestored();
                 }
             }
         }
@@ -134,16 +140,16 @@ namespace KalponicStudio.Health
 
             if (currentShield != oldShield)
             {
-                onShieldChanged?.Invoke(currentShield, maxShield);
+                RaiseShieldChanged(currentShield, maxShield);
                 UpdateShieldVisual();
 
                 if (oldShield <= 0 && currentShield > 0)
                 {
-                    onShieldRestored?.Invoke();
+                    RaiseShieldRestored();
                 }
                 else if (currentShield <= 0 && oldShield > 0)
                 {
-                    onShieldDepleted?.Invoke();
+                    RaiseShieldDepleted();
                     if (healthEvents != null)
                     {
                         healthEvents.RaiseShieldDepleted();
@@ -181,7 +187,7 @@ namespace KalponicStudio.Health
         {
             maxShield = Mathf.Max(1, newMaxShield);
             currentShield = Mathf.Min(currentShield, maxShield);
-            onShieldChanged?.Invoke(currentShield, maxShield);
+            RaiseShieldChanged(currentShield, maxShield);
             UpdateShieldVisual();
         }
 
@@ -214,8 +220,8 @@ namespace KalponicStudio.Health
             int oldShield = currentShield;
             currentShield = Mathf.Max(0, currentShield - damageAbsorbed);
 
-            onShieldChanged?.Invoke(currentShield, maxShield);
-            onShieldAbsorbed?.Invoke(damageAbsorbed);
+            RaiseShieldChanged(currentShield, maxShield);
+            RaiseShieldAbsorbed(damageAbsorbed);
             if (healthEvents != null)
             {
                 healthEvents.RaiseShieldAbsorbed(damageAbsorbed);
@@ -225,7 +231,7 @@ namespace KalponicStudio.Health
 
             if (currentShield <= 0 && oldShield > 0)
             {
-                onShieldDepleted?.Invoke();
+                RaiseShieldDepleted();
                 if (healthEvents != null)
                 {
                     healthEvents.RaiseShieldDepleted();
@@ -234,6 +240,30 @@ namespace KalponicStudio.Health
 
             UpdateShieldVisual();
             return remainingDamage;
+        }
+
+        private void RaiseShieldChanged(int current, int max)
+        {
+            ShieldChanged?.Invoke(current, max);
+            onShieldChanged?.Invoke(current, max);
+        }
+
+        private void RaiseShieldAbsorbed(int damage)
+        {
+            ShieldAbsorbed?.Invoke(damage);
+            onShieldAbsorbed?.Invoke(damage);
+        }
+
+        private void RaiseShieldDepleted()
+        {
+            ShieldDepleted?.Invoke();
+            onShieldDepleted?.Invoke();
+        }
+
+        private void RaiseShieldRestored()
+        {
+            ShieldRestored?.Invoke();
+            onShieldRestored?.Invoke();
         }
     }
 }

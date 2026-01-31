@@ -28,12 +28,19 @@ namespace KalponicStudio.Health
         [SerializeField] private float flashInterval = 0.1f;
 
         [Header("Events")]
-        public UnityEvent<int, int> onHealthChanged = new UnityEvent<int, int>(); // (currentHealth, maxHealth)
-        public UnityEvent<int> onDamageTaken = new UnityEvent<int>(); // damage amount
-        public UnityEvent<int> onHealed = new UnityEvent<int>(); // heal amount
-        public UnityEvent onDeath = new UnityEvent();
-        public UnityEvent onInvulnerabilityStart = new UnityEvent();
-        public UnityEvent onInvulnerabilityEnd = new UnityEvent();
+        [SerializeField] private UnityEvent<int, int> onHealthChanged = new UnityEvent<int, int>(); // (currentHealth, maxHealth)
+        [SerializeField] private UnityEvent<int> onDamageTaken = new UnityEvent<int>(); // damage amount
+        [SerializeField] private UnityEvent<int> onHealed = new UnityEvent<int>(); // heal amount
+        [SerializeField] private UnityEvent onDeath = new UnityEvent();
+        [SerializeField] private UnityEvent onInvulnerabilityStart = new UnityEvent();
+        [SerializeField] private UnityEvent onInvulnerabilityEnd = new UnityEvent();
+
+        public event Action<int, int> HealthChanged;
+        public event Action<int> DamageTaken;
+        public event Action<int> Healed;
+        public event Action Death;
+        public event Action InvulnerabilityStarted;
+        public event Action InvulnerabilityEnded;
 
         // Public properties
         public int MaxHealth => maxHealth;
@@ -223,6 +230,7 @@ namespace KalponicStudio.Health
 
             invulnerabilityTimer = invulnerabilityDuration;
             onInvulnerabilityStart?.Invoke();
+            InvulnerabilityStarted?.Invoke();
 
             // Store original sprite state
             if (spriteRenderer != null)
@@ -239,6 +247,7 @@ namespace KalponicStudio.Health
                 spriteRenderer.enabled = originalSpriteEnabled;
             }
             onInvulnerabilityEnd?.Invoke();
+            InvulnerabilityEnded?.Invoke();
         }
 
         /// <summary>
@@ -257,6 +266,7 @@ namespace KalponicStudio.Health
 
         private void RaiseHealthChanged()
         {
+            HealthChanged?.Invoke(currentHealth, maxHealth);
             onHealthChanged?.Invoke(currentHealth, maxHealth);
             if (healthEvents != null)
             {
@@ -266,6 +276,7 @@ namespace KalponicStudio.Health
 
         private void RaiseDamageTaken(int damage)
         {
+            DamageTaken?.Invoke(damage);
             onDamageTaken?.Invoke(damage);
             if (healthEvents != null)
             {
@@ -275,6 +286,7 @@ namespace KalponicStudio.Health
 
         private void RaiseHealed(int amount)
         {
+            Healed?.Invoke(amount);
             onHealed?.Invoke(amount);
             if (healthEvents != null)
             {
@@ -284,6 +296,7 @@ namespace KalponicStudio.Health
 
         private void RaiseDeath()
         {
+            Death?.Invoke();
             onDeath?.Invoke();
             if (healthEvents != null)
             {

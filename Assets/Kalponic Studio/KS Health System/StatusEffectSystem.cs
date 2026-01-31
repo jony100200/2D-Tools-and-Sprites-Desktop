@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -20,8 +21,11 @@ namespace KalponicStudio.Health
         [SerializeField] private List<StatusEffect> activeEffects = new List<StatusEffect>();
 
         [Header("Events")]
-        public UnityEvent<string> onEffectApplied = new UnityEvent<string>();
-        public UnityEvent<string> onEffectExpired = new UnityEvent<string>();
+        [SerializeField] private UnityEvent<string> onEffectApplied = new UnityEvent<string>();
+        [SerializeField] private UnityEvent<string> onEffectExpired = new UnityEvent<string>();
+
+        public event Action<string> EffectApplied;
+        public event Action<string> EffectExpired;
 
         // Component references
         private HealthSystem healthSystem;
@@ -164,6 +168,7 @@ namespace KalponicStudio.Health
 
         private void RaiseEffectApplied(string effectName)
         {
+            EffectApplied?.Invoke(effectName);
             onEffectApplied?.Invoke(effectName);
             if (healthEvents != null)
             {
@@ -173,6 +178,7 @@ namespace KalponicStudio.Health
 
         private void RaiseEffectExpired(string effectName)
         {
+            EffectExpired?.Invoke(effectName);
             onEffectExpired?.Invoke(effectName);
             if (healthEvents != null)
             {

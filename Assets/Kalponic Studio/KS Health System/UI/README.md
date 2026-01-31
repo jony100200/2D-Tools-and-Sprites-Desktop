@@ -161,10 +161,10 @@ controller.SetHealthSystem(targetHealthSystem);
 // No manual polling needed!
 
 // For custom event handling
-healthSystem.onDeath.AddListener(() => {
+healthSystem.Death += () => {
     // Custom death UI logic
     healthUIController.gameObject.SetActive(false);
-});
+};
 ```
 
 ---

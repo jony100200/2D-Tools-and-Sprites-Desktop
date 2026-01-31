@@ -72,8 +72,8 @@ namespace KalponicStudio.Health.Tests
 
             int unityCount = 0;
             int channelCount = 0;
-            health.onDamageTaken.AddListener(_ => unityCount++);
-            channel.onDamageTaken.AddListener(_ => channelCount++);
+            health.DamageTaken += _ => unityCount++;
+            channel.DamageTaken += _ => channelCount++;
 
             health.SetMaxHealth(100);
             health.SetHealth(100);
