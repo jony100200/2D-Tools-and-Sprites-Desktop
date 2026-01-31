@@ -54,7 +54,172 @@ That is enough to be fully functional.
 
 ---
 
-## 3) Recommended setup by game type
+## 3) Step-by-step setup (scene)
+
+### Beginner Scene Setup (Hierarchy)
+1) Create a Player GameObject
+   - Hierarchy: Right-click -> Create Empty
+   - Name: Player
+   - Add components:
+     - SpriteRenderer
+     - Rigidbody2D (2D) or Rigidbody (3D)
+     - Your movement script (optional)
+
+2) Add the health system
+   - Select Player
+   - Add Component -> HealthSystem
+
+3) Optional modules (add only what you need)
+   - Add Component -> ShieldSystem
+   - Add Component -> StatusEffectSystem
+   - Add Component -> HealthVisualSystem
+
+4) Create a UI Canvas (optional but common)
+   - Hierarchy: Right-click -> UI -> Canvas
+   - Unity will also create an EventSystem if missing
+
+5) Add Health UI
+   - Select the Canvas
+   - Create an empty child: Right-click -> Create Empty (name: HealthUI)
+   - Add Component -> HealthUIController on HealthUI
+   - Create children under HealthUI:
+     - UI -> Slider (add HealthBar script)
+     - UI -> Text or TextMeshPro (add HealthText script)
+     - UI -> Image (add HealthIcon script)
+   - Assign the HealthSystem reference in HealthUIController
+
+6) (Optional) Create an Event Channel
+   - Project window: Right-click -> Create -> Kalponic Studio -> Health -> Event Channel
+   - Assign it to HealthSystem and HealthVisualSystem if you prefer SO events
+
+### Step 1: Create a unit
+1) Create a GameObject (Player or Enemy).
+2) Add `HealthSystem`.
+3) Optional: Add `ShieldSystem` and `StatusEffectSystem`.
+
+### Step 2: Add visuals (optional)
+1) Add `HealthVisualSystem`.
+2) Assign:
+   - `Main Renderer` (SpriteRenderer)
+   - UI Images for damage/heal flash (optional)
+   - Particle systems (optional)
+   - Audio source + clips (optional)
+
+### Step 3: Create UI (optional)
+1) Create a Canvas.
+2) Add `HealthUIController` to a parent UI object.
+3) Add one or more UI children:
+   - `HealthBar`
+   - `HealthText`
+   - `HealthIcon`
+4) Assign the `HealthSystem` to the controller.
+
+### Step 4: Optional event channel
+1) Create `HealthEventChannelSO`.
+2) Assign it to any systems you want to drive via ScriptableObject events.
+
+---
+
+## 4) Code usage (common patterns)
+
+### A) Subscribe to events (recommended)
+```csharp
+using UnityEngine;
+using KalponicStudio.Health;
+
+public class HealthListener : MonoBehaviour
+{
+    [SerializeField] private HealthSystem health;
+
+    private void OnEnable()
+    {
+        health.HealthChanged += OnHealthChanged;
+        health.DamageTaken += OnDamageTaken;
+        health.Death += OnDeath;
+    }
+
+    private void OnDisable()
+    {
+        health.HealthChanged -= OnHealthChanged;
+        health.DamageTaken -= OnDamageTaken;
+        health.Death -= OnDeath;
+    }
+
+    private void OnHealthChanged(int current, int max) { }
+    private void OnDamageTaken(int amount) { }
+    private void OnDeath() { }
+}
+```
+
+### B) Deal damage (simple)
+```csharp
+health.TakeDamage(25);
+```
+
+### C) Deal damage with type and options
+```csharp
+DamageInfo info = new DamageInfo
+{
+    Amount = 40,
+    Type = DamageType.Fire,
+    BypassShield = false,
+    IgnoreMitigation = false,
+    Source = gameObject,
+    SourceTag = "Enemy"
+};
+
+health.TakeDamage(info);
+```
+
+### D) Heal or revive
+```csharp
+health.Heal(20);
+health.Revive(50);
+```
+
+### E) Apply status effects
+```csharp
+statusEffectSystem.ApplyPoison(5f, 3);
+statusEffectSystem.ApplyRegeneration(6f, 4);
+statusEffectSystem.ApplySpeedBoost(8f, 1.5f);
+```
+
+### F) Apply a Health Profile
+```csharp
+public class HealthProfileApplier : MonoBehaviour
+{
+    [SerializeField] private HealthProfileSO profile;
+    [SerializeField] private HealthSystem health;
+    [SerializeField] private ShieldSystem shield;
+
+    private void Awake()
+    {
+        profile.ApplyTo(health);
+        profile.ApplyTo(shield);
+    }
+}
+```
+
+---
+
+## 5) UI setup (step-by-step)
+
+### Health bar + text + icon
+1) Create a Canvas.
+2) Add `HealthUIController` to a parent UI object.
+3) Add children:
+   - `HealthBar` (Slider/Image based)
+   - `HealthText` (TextMeshPro or Text)
+   - `HealthIcon` (Image)
+4) Assign the `HealthSystem` to `HealthUIController`.
+
+Tips:
+- `HealthUIController` can auto-find children if enabled.
+- Use `HealthUIManager` for multiple units.
+
+---
+
+## 6) Recommended setup by game type
 
 Shmup (Sky Force style)
 - HealthSystem + ShieldSystem + HealthVisualSystem
@@ -78,7 +243,7 @@ Action RPG
 
 ---
 
-## 4) How to use events
+## 7) How to use events
 
 Code (C# events)
 - HealthSystem: `HealthChanged`, `DamageTaken`, `Healed`, `Death`, `Downed`, `Revived`
@@ -93,7 +258,7 @@ Event Channel (optional)
 
 ---
 
-## 5) Damage types and mitigation
+## 8) Damage types and mitigation
 
 - `DamageType` includes Generic, Physical, Fire, Ice, Poison, Electric, True.
 - Flat and percent mitigation are applied unless damage is True or IgnoreMitigation is set.
@@ -101,7 +266,7 @@ Event Channel (optional)
 
 ---
 
-## 6) Status effects and stacking
+## 9) Status effects and stacking
 
 Each effect supports:
 - Duration and tick interval
@@ -116,7 +281,7 @@ Default behavior:
 
 ---
 
-## 7) Downed / Revive
+## 10) Downed / Revive
 
 Optional flow:
 - On lethal damage: enter Downed state instead of Death
@@ -125,7 +290,7 @@ Optional flow:
 
 ---
 
-## 8) Health Profiles
+## 11) Health Profiles
 
 `HealthProfileSO` can configure:
 - Health settings
@@ -138,7 +303,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 9) Common issues
+## 12) Common issues
 
 - If no events fire, check if you subscribed to C# events or assigned UnityEvents.
 - If a shield exists but damage hits health, ensure `ShieldSystem` is on the same object.
@@ -146,7 +311,7 @@ Use this for fast setup across many enemies/units.
 
 ---
 
-## 10) Notes on modularity
+## 13) Notes on modularity
 
 You can use any subset:
 - Health only
@@ -156,3 +321,15 @@ You can use any subset:
 - Full setup
 
 This is designed to remain clear, simple, and easy to debug.
+
+---
+
+## 14) Separation of Function vs Visuals (recommended)
+
+Keep gameplay logic separate from visuals:
+- Core logic: `HealthSystem`, `ShieldSystem`, `StatusEffectSystem`
+- Visuals/feedback: `HealthVisualSystem`
+- UI display: `HealthUIController` + UI components
+
+Core systems should never depend on visuals or UI.
+Visuals and UI should only listen to events.
